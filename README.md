@@ -1,4 +1,3 @@
-# fed2-lso-remote_sysmonitor
 # Project: Remote System Monitor
 # Professor: Marco Faella
 
