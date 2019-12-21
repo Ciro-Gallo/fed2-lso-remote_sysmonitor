@@ -10,7 +10,7 @@
 #include <netinet/in.h>
 
 #include <sys/sysinfo.h>
-#include <arpa/inet.h> //per il client, in particolare per la funzione inet_aton()
+#include <arpa/inet.h> 
 
 #include <pthread.h>
 
@@ -41,7 +41,8 @@ void sigpipeHandler(int code){
 
 void sigintHandler(int code){
     write(STDOUT_FILENO,"\nHo catturato SIGINT!\n",22);
-    
+    listDestroy(sdContainer);
+
     exit(1);
 } 
 
@@ -117,7 +118,6 @@ int main(int argc, char * argv[]){
 
         sdAgent2 = accept(sdAgent,(struct sockaddr *)&client_addr,&size_client_addr);
         
-
         if(sdAgent != -1){
             listInsert(sdContainer,sdAgent2);
             printf("Connection in - IP: %s - PORT: %d\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));
