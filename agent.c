@@ -15,7 +15,7 @@
 #define MAX_PORT 65535
 #define BUFFSIZE 3
 
-int socketfd;
+int sd;
 
 int argToInt(char* arg) {
     char* p = NULL;
@@ -41,10 +41,10 @@ void checkArgs(int args, char** argv) {
 }
 
 void handleSignals(int s) {
-    if( close(socketfd) != 0 ) {
+    if( close(sd) < 0 ) {
         perror("Error closing socket\n");
-        exit (-1);
     }
+    exit (-1);
 }
 
 
@@ -62,28 +62,33 @@ int main(int args, char** argv) {
     myaddress.sin_port = htons(port);
     inet_aton(argv[2],&myaddress.sin_addr);
 
-    if( (socketfd = socket(PF_INET,SOCK_STREAM,0)) != 0 ) {
+    if( (sd = socket(PF_INET,SOCK_STREAM,0)) < 0 ) {
         perror("Error creating socket\n");
         exit (-1);
     }
 
-    if( connect(socketfd,(struct sockaddr*)&myaddress,sizeof(myaddress)) != 0 ) {
+    if( connect(sd,(struct sockaddr*)&myaddress,sizeof(myaddress)) != 0 ) {
         perror("Error during the connection\n");
         exit (-1);
     }
 
-    if( sysinfo(&info) != 0 ) {
-        perror("Error fetching system informations\n");
-        exit (-1);
-    } 
-    buf[0] = info.uptime;
-    buf[1] = info.freeram;
-    buf[2] = info.procs;
 
-    if( write(socketfd,buf,BUFFSIZE) != BUFFSIZE ) {
-        perror("Error writing\n");
-        exit (-1);
+    while(1) {
+        if( sysinfo(&info) != 0 ) {
+            perror("Error fetching system informations\n");
+            exit (-1);
+        } 
+        buf[0] = info.uptime;
+        buf[1] = info.freeram;
+        buf[2] = info.procs;
+        printf("uptime = %lu freeram = %lu procs = %lu\n",buf[0],buf[1],buf[2]);
+        
+        if( write(sd,buf,sizeof(buf)) != sizeof(buf) ) {
+            perror("Error writing\n");
+            exit (-1);
+        }
+        sleep(3);
     }
-
+   
     return 0;
 }
