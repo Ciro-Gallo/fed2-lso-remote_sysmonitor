@@ -2,6 +2,8 @@
 #include <sys/socket.h>
 #include <sys/sysinfo.h>
 
+#include <netdb.h>
+
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -80,7 +82,7 @@ int main(int args, char** argv) {
         perror("Error during the connection\n");
         exit (-1);
     }
-
+    
 
     while(1) {
         if( sysinfo(&info) != 0 ) {
