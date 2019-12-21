@@ -8,9 +8,11 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <stdbool.h>
 
 #include <sys/sysinfo.h>
 #include <arpa/inet.h> 
+#include <netdb.h>
 
 #include <pthread.h>
 
@@ -23,6 +25,8 @@ node * sdContainer;
 
 int sdAgent;
 pthread_attr_t threadAttributes;
+bool serverKilled;
+
 
 int parsePort(char *arg) {
   char *p = NULL;
@@ -43,11 +47,14 @@ void sigpipeHandler(int code){
 
 void sigintHandler(int code){
     write(STDOUT_FILENO,"\nHo catturato SIGINT!\n",22);
+    serverKilled = true;
     listCloseAndDestroy(sdContainer);
     if(pthread_attr_destroy(&threadAttributes) != 0){
         write(STDERR_FILENO,"Error on attributes destroy",28);
     }
 
+    //Main thread should wait until all threads end with pthread_exit()
+    sleep(1);
     exit(-2);
 } 
 
@@ -56,7 +63,7 @@ void * handleAgent(void * arg){
 
     unsigned long read_buffer[3];
 
-    while(1){
+    while(!serverKilled){
         //Pulizia buffer di lettura
         memset(read_buffer,0,sizeof(read_buffer));
 
@@ -69,7 +76,7 @@ void * handleAgent(void * arg){
         printf("\nUptime: %lu Freeram: %lu Procs: %lu\n", read_buffer[0], read_buffer[1], read_buffer[2]); 
     }
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 
@@ -125,13 +132,38 @@ int main(int argc, char * argv[]){
     }
 
     sdContainer = listCreate();
+    struct hostent * clientInfo;
+    struct in_addr inAgentAddress;
+    char * idClient;
+    time_t timer;
+    char * instant;
 
     while(1){
 
         sdAgent2 = accept(sdAgent,(struct sockaddr *)&client_addr,&size_client_addr);
-        
+
         if(sdAgent != -1){
-            printf("Connection in - IP: %s - PORT: %d\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));
+            
+            //Get time
+            time(&timer);
+            instant = ctime(&timer);
+            printf("Instant: %s\n", instant);
+
+            inAgentAddress = client_addr.sin_addr;
+            clientInfo = gethostbyaddr(&inAgentAddress,sizeof(inAgentAddress),AF_INET);
+
+            if(clientInfo != NULL){
+                idClient = (char *)malloc(sizeof(char)*sizeof(clientInfo->h_name));
+                strcpy(idClient,clientInfo->h_name);
+                printf("Connection in - IP: %s - PORT: %d - HOST: %s\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port),idClient);
+            }
+            else{
+                //error("gethostfun",h_errno);
+                printf("\nErrore sulla gethostbyaddr\n");
+                idClient = (char *)malloc(sizeof(char)*sizeof(inet_ntoa(client_addr.sin_addr)));
+                strcpy(idClient,inet_ntoa(client_addr.sin_addr));
+                printf("Resolution failed. IP: %s\n", idClient);
+            }
 
             pthread_create(&tid,&threadAttributes,handleAgent,&sdAgent2);
             pthread_detach(tid);
