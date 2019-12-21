@@ -178,20 +178,14 @@ int main(int argc, char * argv[]){
                 printf("Resolution failed. IP: %s\n", idAgent);
             }
 
+            //Prepare struct to pass to thread
             agentInfo * info = (agentInfo *)malloc(sizeof(agentInfo));
             info->sd = sdAgent2;
             info->instant = instant;
             info->id = idAgent;
 
-            //Creare una struct perché bisogna passare sia sdAgent2 (socket id) sia due stringhe
-            //printf("MAIN Instant: %s\n", instant);
-            //printf("MAIN Connection in - IP: %s - PORT: %d - HOST: %s\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port),idAgent);
-
             pthread_create(&tid,&threadAttributes,handleAgent,info);
-            pthread_detach(tid);
             listInsert(sdContainer,sdAgent2,tid);
-            printf("List of sd: ");
-            listPrint(sdContainer);
         }
         else{
             error("Accept error!",1);
