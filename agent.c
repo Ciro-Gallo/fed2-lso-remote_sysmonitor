@@ -25,7 +25,7 @@ void sigIntHandler(int fd) {
 
 int main() {
   int fd;
-
+  //ciao
   struct sysinfo str;
   if( sysinfo(&str) != 0 ) {
     printf("sysinfo error\n");
