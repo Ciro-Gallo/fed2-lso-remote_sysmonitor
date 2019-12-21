@@ -20,7 +20,9 @@
 #define MAX_PORT 65535 
 
 node * sdContainer;
+
 int sdAgent;
+pthread_attr_t threadAttributes;
 
 int parsePort(char *arg) {
   char *p = NULL;
@@ -42,8 +44,11 @@ void sigpipeHandler(int code){
 void sigintHandler(int code){
     write(STDOUT_FILENO,"\nHo catturato SIGINT!\n",22);
     listCloseAndDestroy(sdContainer);
+    if(pthread_attr_destroy(&threadAttributes) != 0){
+        write(STDERR_FILENO,"Error on attributes destroy",28);
+    }
 
-    exit(1);
+    exit(-2);
 } 
 
 void * handleAgent(void * arg){
@@ -56,11 +61,12 @@ void * handleAgent(void * arg){
         memset(read_buffer,0,sizeof(read_buffer));
 
         if(read(socketAgent,read_buffer,sizeof(read_buffer))==0){
-            printf("L'agent si e disconnesso!\n");
+            printf("Agent has disconnected!\n");
+            pthread_exit(NULL);
             break;
         }
 
-        printf("\nUptime: %lu Freeram: %lu Procs: %lu\n", read_buffer[0], read_buffer[1], read_buffer[2]);
+        printf("\nUptime: %lu Freeram: %lu Procs: %lu\n", read_buffer[0], read_buffer[1], read_buffer[2]); 
     }
 
     return NULL;
@@ -71,6 +77,9 @@ int main(int argc, char * argv[]){
 
     //signal(SIGPIPE,sigpipeHandler);
     signal(SIGINT,sigintHandler);
+
+    //Redirect stderr to stdout
+    dup2(STDOUT_FILENO,STDERR_FILENO);
 
     struct sockaddr_in server_addr, client_addr;
 
@@ -104,13 +113,16 @@ int main(int argc, char * argv[]){
         error("Error in listening!\n",1);
     }
 
-    socklen_t size_client_addr;
+    socklen_t size_client_addr = 0;
     int sdAgent2;
     pthread_t tid;
 
-    pthread_attr_t threadAttributes;
-    pthread_attr_init(&threadAttributes);
-    pthread_attr_setdetachstate(&threadAttributes,PTHREAD_CREATE_DETACHED);
+    if(pthread_attr_init(&threadAttributes) != 0){
+        exit(-1);
+    }
+    if(pthread_attr_setdetachstate(&threadAttributes,PTHREAD_CREATE_DETACHED) != 0){
+        exit(-1);
+    }
 
     sdContainer = listCreate();
 
@@ -119,15 +131,13 @@ int main(int argc, char * argv[]){
         sdAgent2 = accept(sdAgent,(struct sockaddr *)&client_addr,&size_client_addr);
         
         if(sdAgent != -1){
-            listInsert(sdContainer,sdAgent2);
             printf("Connection in - IP: %s - PORT: %d\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port));
 
+            pthread_create(&tid,&threadAttributes,handleAgent,&sdAgent2);
+            pthread_detach(tid);
+            listInsert(sdContainer,sdAgent2,tid);
             printf("List of sd: ");
             listPrint(sdContainer);
-
-            pthread_create(&tid,&threadAttributes,handleAgent,&sdAgent2);
-
-            //close(sdAgent2);
         }
         else{
             error("Accept error!",1);
