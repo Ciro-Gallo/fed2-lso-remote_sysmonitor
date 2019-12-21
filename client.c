@@ -1,6 +1,5 @@
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/sysinfo.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -16,6 +15,21 @@
 #define BUFFSIZE 3
 
 int sd;
+
+void handleSigInt(int s) {
+    if( close(sd) < 0 ) {
+        perror("Error closing socket\n");
+    }
+    exit (-1);
+}
+
+void handleSigPipe(int s) {
+    if( close(sd) < 0 ) {
+        perror("Error closing socket\n");
+    }
+    printf("Server disconnected\n");
+    exit (-1);
+}
 
 int argToInt(char* arg) {
     char* p = NULL;
@@ -40,32 +54,16 @@ void checkArgs(int args, char** argv) {
     }
 }
 
-void handleSigInt(int s) {
-    if( close(sd) < 0 ) {
-        perror("Error closing socket\n");
-    }
-    exit (-1);
-}
-
-void handleSigPipe(int s) {
-    if( close(sd) < 0 ) {
-        perror("Error closing socket\n");
-    }
-    printf("Server disconnected\n");
-    exit (-1);
-}
-
 
 int main(int args, char** argv) {
-
+    
     checkArgs(args,argv);
     signal(SIGINT,handleSigInt);
     signal(SIGPIPE,handleSigPipe);
 
-    unsigned long buf[BUFFSIZE];
     struct sockaddr_in myaddress;
-    struct sysinfo info;
     int port = argToInt(argv[1]);
+
 
     myaddress.sin_family = AF_INET;
     myaddress.sin_port = htons(port);
@@ -82,22 +80,5 @@ int main(int args, char** argv) {
     }
 
 
-    while(1) {
-        if( sysinfo(&info) != 0 ) {
-            perror("Error fetching system informations\n");
-            exit (-1);
-        } 
-        buf[0] = info.uptime;
-        buf[1] = info.freeram;
-        buf[2] = info.procs;
-        printf("uptime = %lu freeram = %lu procs = %lu\n",buf[0],buf[1],buf[2]);
-        
-        if( write(sd,buf,sizeof(buf)) != sizeof(buf) ) {
-            perror("Error writing\n");
-            exit (-1);
-        }
-        sleep(3);
-    }
-   
     return 0;
 }
