@@ -39,6 +39,14 @@ void listDestroy(node * head){
     nodeDestroy(head);
 }
 
+void listCloseAndDestroy(node * head){
+    if(head->next != NULL){
+        listDestroy(head->next);
+    }
+    close(head->value);
+    nodeDestroy(head);
+}
+
 void listPrint(node * head){
     if(head != NULL){
         nodePrint(head);

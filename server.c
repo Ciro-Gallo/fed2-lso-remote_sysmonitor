@@ -41,7 +41,7 @@ void sigpipeHandler(int code){
 
 void sigintHandler(int code){
     write(STDOUT_FILENO,"\nHo catturato SIGINT!\n",22);
-    listDestroy(sdContainer);
+    listCloseAndDestroy(sdContainer);
 
     exit(1);
 } 

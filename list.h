@@ -16,6 +16,7 @@ node * listCreate();
 
 void listInsert(node * head,int value);
 void listDestroy(node * head);
+void listCloseAndDestroy(node * head);
 void listPrint(node * head);
 
 
