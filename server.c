@@ -21,12 +21,17 @@
 #define MIN_PORT 1024
 #define MAX_PORT 65535 
 
+typedef struct agentInfo{
+    int sd;
+    char * instant;
+    char * id;
+} agentInfo;
+
 node * sdContainer;
 
 int sdAgent;
 pthread_attr_t threadAttributes;
 bool serverKilled;
-
 
 int parsePort(char *arg) {
   char *p = NULL;
@@ -59,9 +64,13 @@ void sigintHandler(int code){
 } 
 
 void * handleAgent(void * arg){
-    int socketAgent = *(int *)arg;
+    agentInfo * info = (agentInfo *)arg;
+
+    int socketAgent = info->sd;
 
     unsigned long read_buffer[3];
+
+    printf("\nTHREAD - Instant: %s HOST: %s\n", info->instant, info->id);
 
     while(!serverKilled){
         //Pulizia buffer di lettura
@@ -69,6 +78,11 @@ void * handleAgent(void * arg){
 
         if(read(socketAgent,read_buffer,sizeof(read_buffer))==0){
             printf("Agent has disconnected!\n");
+
+            free(info->id);
+            //free(info->instant);
+            free(info);
+
             pthread_exit(NULL);
             break;
         }
@@ -134,7 +148,7 @@ int main(int argc, char * argv[]){
     sdContainer = listCreate();
     struct hostent * clientInfo;
     struct in_addr inAgentAddress;
-    char * idClient;
+    char * idAgent;
     time_t timer;
     char * instant;
 
@@ -147,25 +161,33 @@ int main(int argc, char * argv[]){
             //Get time
             time(&timer);
             instant = ctime(&timer);
-            printf("Instant: %s\n", instant);
-
+            
+            //Get hostname or IP (if host not available)
             inAgentAddress = client_addr.sin_addr;
             clientInfo = gethostbyaddr(&inAgentAddress,sizeof(inAgentAddress),AF_INET);
 
             if(clientInfo != NULL){
-                idClient = (char *)malloc(sizeof(char)*sizeof(clientInfo->h_name));
-                strcpy(idClient,clientInfo->h_name);
-                printf("Connection in - IP: %s - PORT: %d - HOST: %s\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port),idClient);
+                idAgent = (char *)malloc(sizeof(char)*(strlen(clientInfo->h_name)+1));
+                strcpy(idAgent,clientInfo->h_name);
             }
             else{
                 //error("gethostfun",h_errno);
                 printf("\nErrore sulla gethostbyaddr\n");
-                idClient = (char *)malloc(sizeof(char)*sizeof(inet_ntoa(client_addr.sin_addr)));
-                strcpy(idClient,inet_ntoa(client_addr.sin_addr));
-                printf("Resolution failed. IP: %s\n", idClient);
+                idAgent = (char *)malloc(sizeof(char)*strlen(inet_ntoa(client_addr.sin_addr)+1));
+                strcpy(idAgent,inet_ntoa(client_addr.sin_addr));
+                printf("Resolution failed. IP: %s\n", idAgent);
             }
 
-            pthread_create(&tid,&threadAttributes,handleAgent,&sdAgent2);
+            agentInfo * info = (agentInfo *)malloc(sizeof(agentInfo));
+            info->sd = sdAgent2;
+            info->instant = instant;
+            info->id = idAgent;
+
+            //Creare una struct perché bisogna passare sia sdAgent2 (socket id) sia due stringhe
+            //printf("MAIN Instant: %s\n", instant);
+            //printf("MAIN Connection in - IP: %s - PORT: %d - HOST: %s\n", inet_ntoa(client_addr.sin_addr), (int)ntohs(client_addr.sin_port),idAgent);
+
+            pthread_create(&tid,&threadAttributes,handleAgent,info);
             pthread_detach(tid);
             listInsert(sdContainer,sdAgent2,tid);
             printf("List of sd: ");
