@@ -30,6 +30,7 @@ long parseIP(char * IP){
     int i=0;
     int j=0;
 
+    //Copy IP without dots into newIP
     while(i<len){
         if(IP[i] != '.'){
             newIP[j] = IP[i];
@@ -66,7 +67,7 @@ void sigintHandler(int code){
     }
 
     //Main thread should wait until all threads end with pthread_exit()
-    //Change sleep with syncro mechanism, such as conditional variable or recursive mutex
+    //TODO: Change sleep with syncro mechanism, such as conditional variable or recursive mutex
     sleep(5);
 
     destroyBSTHostInfo();
@@ -84,18 +85,21 @@ void initBSTHostInfo(void){
 
 void * handleAgent(void * arg){
     agentInfo * info = (agentInfo *)arg;
-    bool inserted = false;
-
-    time_t timer;
-    char * currentTime;
-    char * lastTime;
 
     int socketAgent = info->sd;
+    bool inserted = false;
+    time_t timer;
+
+    char * currentTime;
+    char * lastTime;
+    
     long localKey;
     BSTNode * node;
-    unsigned long read_buffer[3];
     BSTNode * nodeFound;
-    printf("\nTHREAD - Instant: %s HOST: %s\n", info->time, info->idhost);
+
+    unsigned long read_buffer[3];
+    
+    //Set localKey to agent's IP.
     localKey = parseIP(info->IP);
 
     while(!serverKilled){
@@ -103,24 +107,26 @@ void * handleAgent(void * arg){
         time(&timer);
         currentTime = ctime(&timer);
 
-        //Pulizia buffer di lettura
+        //Clean buffer
         memset(read_buffer,0,sizeof(read_buffer));
 
-        //considera l'agent disconnesso dopo 6 secondi
+        //If agent closes socket, then wait 6 seconds and check if it has reconnected.
         if(read(socketAgent,read_buffer,sizeof(read_buffer)) == 0){
             sleep(6);
+
             nodeFound = bstSearch(bstHostInfo->root,localKey);
             if(strcmp(nodeFound->time,lastTime) == 0){
-                printf("Agent has been sent to disconnected!\n");
+                //Agent has not reconnected
+                printf("Agent set to disconnected!\n");
                 bstSetState(bstHostInfo->root,localKey,false);
             }
-
+            bstPrint(bstHostInfo->root);
+            
             pthread_exit(NULL);
             break;
         }
- 
 
-        printf("\nUptime: %lu Freeram: %lu Procs: %lu\n", read_buffer[UPTIME], read_buffer[FREERAM], read_buffer[PROCS]); 
+        //printf("\nUptime: %lu Freeram: %lu Procs: %lu\n", read_buffer[UPTIME], read_buffer[FREERAM], read_buffer[PROCS]); 
 
         pthread_mutex_lock(&bstHostInfo->mutex);
             
@@ -137,18 +143,17 @@ void * handleAgent(void * arg){
                 else{
                     //Agent isn't in the structure, insert new infos.
                     bstHostInfo->root = bstInsert(bstHostInfo->root,node);
-                    bstPrint(bstHostInfo->root);
-                    printf("\n");
+                    printf("Host inserted!\n");
                 }
                 inserted = true;
             }
             else{ //Update of this agent (still connected)
                 bstUpdate(bstHostInfo->root,node);
-
-                printf("Ho aggiornato l'host. Albero:\n");
-                bstPrint(bstHostInfo->root);
-                printf("\n");
+                printf("Host updated!\n");
             }
+
+            bstPrint(bstHostInfo->root);
+            printf("\n");
 
         pthread_mutex_unlock(&bstHostInfo->mutex);
 
@@ -157,7 +162,8 @@ void * handleAgent(void * arg){
     free(info->IP);
     free(info->idhost);
     free(info);
-    printf("\nSto killando dolcemente...\n");
+
+    printf("\nSafe-killing thread...\n");
     pthread_exit(NULL);
 }
 

@@ -66,7 +66,8 @@ BSTNode * bstInsert(BSTNode * root, BSTNode * data) {
 void bstPrint(BSTNode * root){
     if(root != NULL){
         bstPrint(root->sx);
-        printf("Key: %ld Host: %s Uptime: %lu Time: %s", root->key, root->idhost, root->uptime, root->time);
+        printf("Key: %ld\nHost: %s\nState: %d\nTime: %s\n", root->key, root->idhost, root->connected,root->time);
+        printf("Freeram: %lu\nUptime: %lu\nProcs: %lu\n\n", root->freeram, root->uptime, root->procs);
         bstPrint(root->dx);
     }
 }
