@@ -5,7 +5,7 @@ node * sdContainer;
 int sdAgent;
 pthread_attr_t threadAttributes;
 bool serverKilled = false;
-
+struct timeval timeout;
 BSTHostInfo * bstHostInfo;
 
 void destroyBSTHostInfo(void){
@@ -48,7 +48,6 @@ long parseIP(char * IP){
 }
 
 
-
 void error(char * msg,int err){
     perror(msg);
     exit(err);
@@ -89,42 +88,47 @@ void * handleAgent(void * arg){
 
     time_t timer;
     char * currentTime;
+    char * lastTime;
 
     int socketAgent = info->sd;
     long localKey;
     BSTNode * node;
     unsigned long read_buffer[3];
-
+    BSTNode * nodeFound;
     printf("\nTHREAD - Instant: %s HOST: %s\n", info->time, info->idhost);
+    localKey = parseIP(info->IP);
 
     while(!serverKilled){
-        //Pulizia buffer di lettura
-        memset(read_buffer,0,sizeof(read_buffer));
-
-        //considera l'agent disconnesso dopo 6 secondi
-        if(read(socketAgent,read_buffer,sizeof(read_buffer))==0){
-            printf("Agent has disconnected!\n");
-            bstSetState(bstHostInfo->root,localKey,false);
-
-            free(info->IP);
-            free(info->idhost);
-            free(info);
-
-            pthread_exit(NULL);
-            break;
-        }
-
         //Get time
         time(&timer);
         currentTime = ctime(&timer);
 
+        //Pulizia buffer di lettura
+        memset(read_buffer,0,sizeof(read_buffer));
+
+        //considera l'agent disconnesso dopo 6 secondi
+        if(read(socketAgent,read_buffer,sizeof(read_buffer)) == 0){
+            sleep(6);
+            nodeFound = bstSearch(bstHostInfo->root,localKey);
+            if(strcmp(nodeFound->time,lastTime) == 0){
+                printf("Agent has been sent to disconnected!\n");
+                bstSetState(bstHostInfo->root,localKey,false);
+            }
+
+            pthread_exit(NULL);
+            break;
+        }
+ 
+
         printf("\nUptime: %lu Freeram: %lu Procs: %lu\n", read_buffer[UPTIME], read_buffer[FREERAM], read_buffer[PROCS]); 
 
         pthread_mutex_lock(&bstHostInfo->mutex);
-            localKey = parseIP(info->IP);
             
             node = newNode(localKey,info->idhost,currentTime,read_buffer[UPTIME],read_buffer[FREERAM],read_buffer[PROCS]);
-            
+
+            lastTime = (char *)malloc(sizeof(char)*(strlen(currentTime)+1));
+            strcpy(lastTime,currentTime);
+
             if(!inserted){ //First insertion of this agent
                 if(bstSetState(bstHostInfo->root,localKey,true)){
                     //Agent is already in the structure, just update infos.
@@ -167,6 +171,9 @@ int main(int argc, char * argv[]){
     dup2(STDOUT_FILENO,STDERR_FILENO);
 
     struct sockaddr_in server_addr, client_addr;
+    
+    timeout.tv_sec = 6;
+    timeout.tv_usec = 0;
 
     if(argv[1]==NULL){
         printf("Error: port needed!\n");
@@ -189,6 +196,7 @@ int main(int argc, char * argv[]){
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     sdAgent = socket(PF_INET,SOCK_STREAM,0);
+    
     if(sdAgent == -1)
         error("Error creating the socket!\n",1);
 
@@ -223,8 +231,12 @@ int main(int argc, char * argv[]){
 
         sdAgent2 = accept(sdAgent,(struct sockaddr *)&client_addr,&size_client_addr);
 
-        if(sdAgent != -1){
+        if(sdAgent2 != -1){
             
+            if(setsockopt(sdAgent2,SOL_SOCKET,SO_RCVTIMEO,(struct timeval *)&timeout,sizeof(struct timeval)) == -1){
+                printf("Error on setsockopt\n");
+            }
+
             //Get time
             time(&timer);
             instant = ctime(&timer);
