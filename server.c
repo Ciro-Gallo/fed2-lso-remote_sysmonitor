@@ -1,12 +1,13 @@
 
 #include "server.h"
 
+//GLOBAL VARIABLES
 node * sdContainer;
 int sdAgent;
 pthread_attr_t threadAttributes;
 bool serverKilled = false;
-struct timeval timeout;
 BSTHostInfo * bstHostInfo;
+
 
 void destroyBSTHostInfo(void){
     pthread_mutex_destroy(&bstHostInfo->mutex);
@@ -121,7 +122,7 @@ void * handleAgent(void * arg){
                 bstSetState(bstHostInfo->root,localKey,false);
             }
             bstPrint(bstHostInfo->root);
-            
+
             pthread_exit(NULL);
             break;
         }
@@ -177,23 +178,18 @@ int main(int argc, char * argv[]){
     dup2(STDOUT_FILENO,STDERR_FILENO);
 
     struct sockaddr_in server_addr, client_addr;
-    
-    timeout.tv_sec = 6;
-    timeout.tv_usec = 0;
 
     if(argv[1]==NULL){
-        printf("Error: port needed!\n");
+        printf("usage: %s <port>\n", argv[0]);
         exit(1);
     }
     
     int port = parseInt(argv[1]);
 
     if(port<MIN_PORT || port>MAX_PORT){ //Fallita la conversione o porta non compresa nel range
-        printf("usage: %s <port>\n", argv[0]);
+        printf("usage: %s <port>. Insert valid port!\n", argv[0]);
         exit(1);
     }
-
-    initBSTHostInfo();
 
     printf("\nServer listening on port %d...\n\n", port);
 
@@ -214,10 +210,6 @@ int main(int argc, char * argv[]){
         error("Error in listening!\n",1);
     }
 
-    socklen_t size_client_addr = sizeof(client_addr);
-    int sdAgent2;
-    pthread_t tid;
-
     if(pthread_attr_init(&threadAttributes) != 0){
         exit(-1);
     }
@@ -225,23 +217,30 @@ int main(int argc, char * argv[]){
         exit(-1);
     }
 
+    //Init struct containing mutex and bst root
+    initBSTHostInfo();
+    //Create list cointaining sd and tid
     sdContainer = listCreate();
+
+    socklen_t size_client_addr = sizeof(client_addr);
+    pthread_t tid;
+
     struct hostent * clientInfo;
     struct in_addr inAgentAddress;
+
+    int sdAgent2;
+
     char * idAgent;
-    time_t timer;
     char * instant;
     char * agentIP;
+
+    time_t timer;
 
     while(1){
 
         sdAgent2 = accept(sdAgent,(struct sockaddr *)&client_addr,&size_client_addr);
 
         if(sdAgent2 != -1){
-            
-            if(setsockopt(sdAgent2,SOL_SOCKET,SO_RCVTIMEO,(struct timeval *)&timeout,sizeof(struct timeval)) == -1){
-                printf("Error on setsockopt\n");
-            }
 
             //Get time
             time(&timer);
@@ -254,6 +253,7 @@ int main(int argc, char * argv[]){
 
             clientInfo = gethostbyaddr(&inAgentAddress,sizeof(inAgentAddress),AF_INET);
 
+            //Get agent's IP as string
             agentIP = (char *)malloc(sizeof(char)*(strlen(inet_ntoa(client_addr.sin_addr))+1));
             strcpy(agentIP,inet_ntoa(client_addr.sin_addr));
 
@@ -263,7 +263,6 @@ int main(int argc, char * argv[]){
             }
             else{
                 //error("gethostfun",h_errno);
-                printf("\nErrore sulla gethostbyaddr\n");
                 idAgent = (char *)malloc(sizeof(char)*(strlen(agentIP)+1));
                 strcpy(idAgent,agentIP);
                 printf("Resolution failed. IP: %s\n", idAgent);
@@ -275,8 +274,6 @@ int main(int argc, char * argv[]){
             info->time = instant;
             info->idhost = idAgent;
             info->IP = agentIP;
-
-            printf("\nAgent IP: %s\n", agentIP);
 
             pthread_create(&tid,&threadAttributes,handleAgent,info);
             
