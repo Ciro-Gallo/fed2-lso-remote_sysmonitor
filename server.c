@@ -23,7 +23,7 @@ long parseInt(char *arg) {
   return result;
 } 
 
-int parseIP(char * IP){
+long parseIP(char * IP){
     int len = strlen(IP);
     char * newIP = (char *)malloc(sizeof(char)*(len-2)); //Length of IP minus 3 dots
 
@@ -41,6 +41,7 @@ int parseIP(char * IP){
     newIP[j]='\0';
 
     long newIPInt = parseInt(newIP);
+
     free(newIP);
 
     return newIPInt;
@@ -90,7 +91,7 @@ void * handleAgent(void * arg){
     char * currentTime;
 
     int socketAgent = info->sd;
-    int localKey;
+    long localKey;
     BSTNode * node;
     unsigned long read_buffer[3];
 
@@ -175,14 +176,13 @@ int main(int argc, char * argv[]){
     int port = parseInt(argv[1]);
 
     if(port<MIN_PORT || port>MAX_PORT){ //Fallita la conversione o porta non compresa nel range
-        printf("Port error!\n");
+        printf("usage: %s <port>\n", argv[0]);
         exit(1);
     }
 
     initBSTHostInfo();
 
     printf("\nServer listening on port %d...\n\n", port);
-    parseIP("109.115.248.125");
 
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
@@ -200,7 +200,7 @@ int main(int argc, char * argv[]){
         error("Error in listening!\n",1);
     }
 
-    socklen_t size_client_addr = 0;
+    socklen_t size_client_addr = sizeof(client_addr);
     int sdAgent2;
     pthread_t tid;
 
@@ -231,9 +231,12 @@ int main(int argc, char * argv[]){
             
             //Get hostname or IP (if host not available)
             inAgentAddress = client_addr.sin_addr;
+
+            printf("\nAgent IP before resolution: %s\n", inet_ntoa(client_addr.sin_addr));
+
             clientInfo = gethostbyaddr(&inAgentAddress,sizeof(inAgentAddress),AF_INET);
 
-            agentIP = (char *)malloc(sizeof(char)*strlen(inet_ntoa(client_addr.sin_addr)+1));
+            agentIP = (char *)malloc(sizeof(char)*(strlen(inet_ntoa(client_addr.sin_addr))+1));
             strcpy(agentIP,inet_ntoa(client_addr.sin_addr));
 
             if(clientInfo != NULL){

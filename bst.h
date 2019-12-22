@@ -7,7 +7,7 @@
 typedef struct BSTNode BSTNode;
 
 struct BSTNode{
-    int key;
+    long key;
     bool connected;
 
     char * idhost;
@@ -22,11 +22,11 @@ struct BSTNode{
 };
 
 
-BSTNode * newNode(int key,char * idhost,char * time,unsigned long uptime,unsigned long freeram,unsigned long procs);
+BSTNode * newNode(long key,char * idhost,char * time,unsigned long uptime,unsigned long freeram,unsigned long procs);
 void bstDestroy(BSTNode * root);
 
-BSTNode * bstSearch(BSTNode * root, int key);
+BSTNode * bstSearch(BSTNode * root, long key);
 BSTNode * bstInsert(BSTNode * root, BSTNode * data);
 void bstPrint(BSTNode * root);
 bool bstUpdate(BSTNode * root,BSTNode * data);
-bool bstSetState(BSTNode * root,int key,bool state);
+bool bstSetState(BSTNode * root,long key,bool state);
