@@ -5,7 +5,7 @@ node * sdContainer;
 int sdAgent;
 pthread_attr_t threadAttributes;
 bool serverKilled = false;
-int globalKey = 1;
+int globalKey = 0;
 
 BSTHostInfo * bstHostInfo;
 
@@ -76,8 +76,10 @@ void * handleAgent(void * arg){
         //Pulizia buffer di lettura
         memset(read_buffer,0,sizeof(read_buffer));
 
+        //considera l'agent disconnesso dopo 6 secondi
         if(read(socketAgent,read_buffer,sizeof(read_buffer))==0){
             printf("Agent has disconnected!\n");
+            bstSetState(bstHostInfo->root,localKey,false);
 
             free(info->idhost);
             free(info);
@@ -95,13 +97,18 @@ void * handleAgent(void * arg){
         pthread_mutex_lock(&bstHostInfo->mutex);
 
             if(!inserted){ //First insertion of this agent
-                node = newNode(globalKey,info->idhost,info->time,read_buffer[UPTIME],read_buffer[FREERAM],read_buffer[PROCS]);
-                bstHostInfo->root = bstInsert(bstHostInfo->root,node);
-                localKey = globalKey;
-                globalKey++;
+                localKey = parsePort(info->idhost);
+                if(bstSetState(bstHostInfo->root,globalKey,true)) {
+                    //the agent is already registered, connection state setted on true
+                    node = newNode(localKey,info->idhost,info->time,read_buffer[UPTIME],read_buffer[FREERAM],read_buffer[PROCS]);
+                    bstUpdate(bstHostInfo->root,node);
+                } else {
+                    node = newNode(localKey,info->idhost,info->time,read_buffer[UPTIME],read_buffer[FREERAM],read_buffer[PROCS]);
+                    bstHostInfo->root = bstInsert(bstHostInfo->root,node);
+                    bstPrint(bstHostInfo->root);
+                    printf("\n");
+                }
                 inserted = true;
-                bstPrint(bstHostInfo->root);
-                printf("\n");
             }
             else{ //Update of this agent (still connected)
                 node = newNode(localKey,info->idhost,currentTime,read_buffer[UPTIME],read_buffer[FREERAM],read_buffer[PROCS]); 
