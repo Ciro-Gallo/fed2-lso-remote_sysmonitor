@@ -1,9 +1,6 @@
 
 #include "bst.h"
 
-void spacchettaNodo(){
-
-}
 
 BSTNode * newNode(char * idhost,char * time,unsigned long uptime,unsigned long freeram,unsigned long procs){
     BSTNode * newNode = (BSTNode *)malloc(sizeof(BSTNode));
@@ -30,8 +27,8 @@ void freeNode(BSTNode * node){
 
 void bstDestroy(BSTNode * root) {
     if(root != NULL) {
-        destroy(root->sx);
-        destroy(root->dx);
+        bstDestroy(root->sx);
+        bstDestroy(root->dx);
         freeNode(root);
     }
 }
@@ -83,9 +80,9 @@ bool bstUpdate(BSTNode * root,BSTNode * data){
         }
         
         if (root->key < data->key) 
-            return bstSearch(root->dx, data); 
+            return bstUpdate(root->dx, data); 
     
-        return bstSearch(root->sx, data); 
+        return bstUpdate(root->sx, data); 
     }
     else{
         return false;
@@ -93,7 +90,7 @@ bool bstUpdate(BSTNode * root,BSTNode * data){
 }
 
 
-void bstSetState(BSTNode * root,int key,bool state){
+bool bstSetState(BSTNode * root,int key,bool state){
     if(root != NULL){
         if (root->key == key){
             //Set state

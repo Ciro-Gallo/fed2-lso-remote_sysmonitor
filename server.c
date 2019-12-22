@@ -1,37 +1,13 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#include <unistd.h>
-#include <signal.h>
+#include "server.h"
 
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <stdbool.h>
-
-#include <sys/sysinfo.h>
-#include <arpa/inet.h> 
-#include <netdb.h>
-
-#include <pthread.h>
-
-#include "list.h"
-
-#define MIN_PORT 1024
-#define MAX_PORT 65535 
-
-typedef struct agentInfo{
-    int sd;
-    char * instant;
-    char * id;
-} agentInfo;
 
 node * sdContainer;
-
 int sdAgent;
 pthread_attr_t threadAttributes;
 bool serverKilled;
+
+BSTHostInfo * bstHostInfo;
 
 int parsePort(char *arg) {
   char *p = NULL;
@@ -62,6 +38,20 @@ void sigintHandler(int code){
     sleep(1);
     exit(-2);
 } 
+
+void initBSTHostInfo(void){
+    bstHostInfo = (BSTHostInfo *)malloc(sizeof(BSTHostInfo));
+    bstHostInfo->root = NULL;
+
+    pthread_mutex_t mutex;
+    pthread_mutex_init(&bstHostInfo->mutex,NULL);
+}
+
+void destroyBSTHostInfo(void){
+    pthread_mutex_destroy(&bstHostInfo->mutex);
+    bstDestroy(bstHostInfo->root);
+    free(bstHostInfo);
+}
 
 void * handleAgent(void * arg){
     agentInfo * info = (agentInfo *)arg;
@@ -115,6 +105,8 @@ int main(int argc, char * argv[]){
         printf("Port error!\n");
         exit(1);
     }
+
+    initBSTHostInfo();
 
     printf("\nServer listening on port %d...\n\n", port);
 
@@ -185,6 +177,7 @@ int main(int argc, char * argv[]){
             info->id = idAgent;
 
             pthread_create(&tid,&threadAttributes,handleAgent,info);
+            
             listInsert(sdContainer,sdAgent2,tid);
         }
         else{

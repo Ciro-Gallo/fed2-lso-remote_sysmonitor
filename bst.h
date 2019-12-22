@@ -1,9 +1,11 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
+typedef struct BSTNode BSTNode;
 
-typedef struct BSTNode{
+struct BSTNode{
     int key;
     bool connected;
 
@@ -16,7 +18,7 @@ typedef struct BSTNode{
 
     BSTNode * dx;
     BSTNode * sx;
-} BSTNode;
+};
 
 
 BSTNode * newNode(char * idhost,char * time,unsigned long uptime,unsigned long freeram,unsigned long procs);
@@ -26,4 +28,4 @@ BSTNode * bstSearch(BSTNode * root, int key);
 BSTNode * bstInsert(BSTNode * root, BSTNode * data);
 void bstPrint(BSTNode * root);
 bool bstUpdate(BSTNode * root,BSTNode * data);
-void bstSetState(BSTNode * root,int key,bool state);
+bool bstSetState(BSTNode * root,int key,bool state);
