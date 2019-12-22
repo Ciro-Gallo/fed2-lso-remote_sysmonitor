@@ -100,6 +100,7 @@ void * handleAgent(void * arg){
         //Pulizia buffer di lettura
         memset(read_buffer,0,sizeof(read_buffer));
 
+        //considera l'agent disconnesso dopo 6 secondi
         if(read(socketAgent,read_buffer,sizeof(read_buffer))==0){
             printf("Agent has disconnected!\n");
             bstSetState(bstHostInfo->root,localKey,false);

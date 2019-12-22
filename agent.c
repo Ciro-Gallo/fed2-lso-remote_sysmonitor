@@ -16,6 +16,9 @@
 #define MIN_PORT 1024
 #define MAX_PORT 65535
 #define BUFFSIZE 3
+#define UPTIME 0
+#define FREERAM 1
+#define PROCS 2
 
 int sd;
 
@@ -89,10 +92,10 @@ int main(int args, char** argv) {
             perror("Error fetching system informations\n");
             exit (-1);
         } 
-        buf[0] = info.uptime;
-        buf[1] = info.freeram;
-        buf[2] = info.procs;
-        printf("uptime = %lu freeram = %lu procs = %lu\n",buf[0],buf[1],buf[2]);
+        buf[UPTIME] = info.uptime;
+        buf[FREERAM] = info.freeram;
+        buf[PROCS] = info.procs;
+        printf("uptime = %lu freeram = %lu procs = %lu\n",buf[UPTIME],buf[FREERAM],buf[PROCS]);
         
         if( write(sd,buf,sizeof(buf)) != sizeof(buf) ) {
             perror("Error writing\n");
