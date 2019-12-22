@@ -16,6 +16,7 @@
 #include <netdb.h>
 
 #include <pthread.h>
+#include <limits.h>
 
 #include "bst.h"
 #include "list.h"
@@ -32,6 +33,7 @@ typedef struct agentInfo{
     int sd;
     char * time;
     char * idhost;
+    char * IP;
 } agentInfo;
 
 typedef struct BSTHostInfo{

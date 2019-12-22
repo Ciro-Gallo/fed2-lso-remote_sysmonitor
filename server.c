@@ -5,7 +5,6 @@ node * sdContainer;
 int sdAgent;
 pthread_attr_t threadAttributes;
 bool serverKilled = false;
-int globalKey = 1;
 
 BSTHostInfo * bstHostInfo;
 
@@ -16,13 +15,38 @@ void destroyBSTHostInfo(void){
     free(bstHostInfo);
 }
 
-int parsePort(char *arg) {
+long parseInt(char *arg) {
   char *p = NULL;
-  int result = (int) strtol(arg, &p, 10);
+  long result = (long) strtol(arg, &p, 10);
   if (p == NULL || *p != '\0') 
     return -1; 
   return result;
 } 
+
+int parseIP(char * IP){
+    int len = strlen(IP);
+    char * newIP = (char *)malloc(sizeof(char)*(len-2)); //Length of IP minus 3 dots
+
+    int i=0;
+    int j=0;
+
+    while(i<len){
+        if(IP[i] != '.'){
+            newIP[j] = IP[i];
+            j++;
+        }
+
+        i++;
+    }
+    newIP[j]='\0';
+
+    long newIPInt = parseInt(newIP);
+    free(newIP);
+
+    return newIPInt;
+}
+
+
 
 void error(char * msg,int err){
     perror(msg);
@@ -78,7 +102,9 @@ void * handleAgent(void * arg){
 
         if(read(socketAgent,read_buffer,sizeof(read_buffer))==0){
             printf("Agent has disconnected!\n");
+            bstSetState(bstHostInfo->root,localKey,false);
 
+            free(info->IP);
             free(info->idhost);
             free(info);
 
@@ -93,20 +119,24 @@ void * handleAgent(void * arg){
         printf("\nUptime: %lu Freeram: %lu Procs: %lu\n", read_buffer[UPTIME], read_buffer[FREERAM], read_buffer[PROCS]); 
 
         pthread_mutex_lock(&bstHostInfo->mutex);
-
+            localKey = parseIP(info->IP);
+            
+            node = newNode(localKey,info->idhost,currentTime,read_buffer[UPTIME],read_buffer[FREERAM],read_buffer[PROCS]);
+            
             if(!inserted){ //First insertion of this agent
-                node = newNode(globalKey,info->idhost,info->time,read_buffer[UPTIME],read_buffer[FREERAM],read_buffer[PROCS]);
-                bstHostInfo->root = bstInsert(bstHostInfo->root,node);
-                localKey = globalKey;
-                globalKey++;
+                if(bstSetState(bstHostInfo->root,localKey,true)){
+                    //Agent is already in the structure, just update infos.
+                    bstUpdate(bstHostInfo->root,node);
+                }
+                else{
+                    //Agent isn't in the structure, insert new infos.
+                    bstHostInfo->root = bstInsert(bstHostInfo->root,node);
+                    bstPrint(bstHostInfo->root);
+                    printf("\n");
+                }
                 inserted = true;
-                bstPrint(bstHostInfo->root);
-                printf("\n");
             }
             else{ //Update of this agent (still connected)
-                node = newNode(localKey,info->idhost,currentTime,read_buffer[UPTIME],read_buffer[FREERAM],read_buffer[PROCS]); 
-
-                printf("\n*** Before update: %s\n", node->idhost);
                 bstUpdate(bstHostInfo->root,node);
 
                 printf("Ho aggiornato l'host. Albero:\n");
@@ -118,6 +148,7 @@ void * handleAgent(void * arg){
 
     }
 
+    free(info->IP);
     free(info->idhost);
     free(info);
     printf("\nSto killando dolcemente...\n");
@@ -140,7 +171,7 @@ int main(int argc, char * argv[]){
         exit(1);
     }
     
-    int port = parsePort(argv[1]);
+    int port = parseInt(argv[1]);
 
     if(port<MIN_PORT || port>MAX_PORT){ //Fallita la conversione o porta non compresa nel range
         printf("Port error!\n");
@@ -150,6 +181,7 @@ int main(int argc, char * argv[]){
     initBSTHostInfo();
 
     printf("\nServer listening on port %d...\n\n", port);
+    parseIP("109.115.248.125");
 
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(port);
@@ -184,6 +216,7 @@ int main(int argc, char * argv[]){
     char * idAgent;
     time_t timer;
     char * instant;
+    char * agentIP;
 
     while(1){
 
@@ -199,6 +232,9 @@ int main(int argc, char * argv[]){
             inAgentAddress = client_addr.sin_addr;
             clientInfo = gethostbyaddr(&inAgentAddress,sizeof(inAgentAddress),AF_INET);
 
+            agentIP = (char *)malloc(sizeof(char)*strlen(inet_ntoa(client_addr.sin_addr)+1));
+            strcpy(agentIP,inet_ntoa(client_addr.sin_addr));
+
             if(clientInfo != NULL){
                 idAgent = (char *)malloc(sizeof(char)*(strlen(clientInfo->h_name)+1));
                 strcpy(idAgent,clientInfo->h_name);
@@ -206,8 +242,8 @@ int main(int argc, char * argv[]){
             else{
                 //error("gethostfun",h_errno);
                 printf("\nErrore sulla gethostbyaddr\n");
-                idAgent = (char *)malloc(sizeof(char)*strlen(inet_ntoa(client_addr.sin_addr)+1));
-                strcpy(idAgent,inet_ntoa(client_addr.sin_addr));
+                idAgent = (char *)malloc(sizeof(char)*(strlen(agentIP)+1));
+                strcpy(idAgent,agentIP);
                 printf("Resolution failed. IP: %s\n", idAgent);
             }
 
@@ -216,6 +252,9 @@ int main(int argc, char * argv[]){
             info->sd = sdAgent2;
             info->time = instant;
             info->idhost = idAgent;
+            info->IP = agentIP;
+
+            printf("\nAgent IP: %s\n", agentIP);
 
             pthread_create(&tid,&threadAttributes,handleAgent,info);
             
