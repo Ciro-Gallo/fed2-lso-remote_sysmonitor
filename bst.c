@@ -2,13 +2,18 @@
 #include "bst.h"
 
 
-BSTNode * newNode(char * idhost,char * time,unsigned long uptime,unsigned long freeram,unsigned long procs){
+BSTNode * newNode(int key,char * idhost,char * time,unsigned long uptime,unsigned long freeram,unsigned long procs){
     BSTNode * newNode = (BSTNode *)malloc(sizeof(BSTNode));
 
-    newNode->idhost = idhost;
+    newNode->key = key;
     newNode->connected = true;
 
-    newNode->time = time;
+    newNode->idhost = (char *)malloc(sizeof(char)*(strlen(idhost)+1));
+    strcpy(newNode->idhost,idhost);
+    
+    newNode->time = (char *)malloc(sizeof(char)*(strlen(time)+1));
+    strcpy(newNode->time,time);
+
     newNode->uptime = uptime;
     newNode->freeram = freeram;
     newNode->procs = procs;
@@ -22,6 +27,7 @@ BSTNode * newNode(char * idhost,char * time,unsigned long uptime,unsigned long f
 void freeNode(BSTNode * node){
     free(node->idhost);
     free(node->time);
+    
     free(node);
 }
 
@@ -60,7 +66,7 @@ BSTNode * bstInsert(BSTNode * root, BSTNode * data) {
 void bstPrint(BSTNode * root){
     if(root != NULL){
         bstPrint(root->sx);
-        printf("Key: %d ", root->key);
+        printf("Key: %d Host: %s Uptime: %lu Time: %s", root->key, root->idhost, root->uptime, root->time);
         bstPrint(root->dx);
     }
 }
@@ -70,11 +76,14 @@ bool bstUpdate(BSTNode * root,BSTNode * data){
     if(root != NULL){
         if (root->key == data->key){
             //Update information
-            root->idhost = data->idhost;
-            root->time = data->time;
+            strcpy(root->idhost,data->idhost);
+            strcpy(root->time,data->time);
+
             root->uptime = data->uptime;
             root->freeram = data->freeram;
             root->procs = data->procs;
+
+            freeNode(data);
 
             return true; 
         }

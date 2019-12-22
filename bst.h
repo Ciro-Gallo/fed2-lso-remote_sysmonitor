@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <stdlib.h>
+#include <string.h>
 
 typedef struct BSTNode BSTNode;
 
@@ -21,7 +22,7 @@ struct BSTNode{
 };
 
 
-BSTNode * newNode(char * idhost,char * time,unsigned long uptime,unsigned long freeram,unsigned long procs);
+BSTNode * newNode(int key,char * idhost,char * time,unsigned long uptime,unsigned long freeram,unsigned long procs);
 void bstDestroy(BSTNode * root);
 
 BSTNode * bstSearch(BSTNode * root, int key);

@@ -1,13 +1,20 @@
 
 #include "server.h"
 
-
 node * sdContainer;
 int sdAgent;
 pthread_attr_t threadAttributes;
-bool serverKilled;
+bool serverKilled = false;
+int globalKey = 1;
 
 BSTHostInfo * bstHostInfo;
+
+void destroyBSTHostInfo(void){
+    pthread_mutex_destroy(&bstHostInfo->mutex);
+    bstDestroy(bstHostInfo->root);
+
+    free(bstHostInfo);
+}
 
 int parsePort(char *arg) {
   char *p = NULL;
@@ -29,13 +36,18 @@ void sigpipeHandler(int code){
 void sigintHandler(int code){
     write(STDOUT_FILENO,"\nHo catturato SIGINT!\n",22);
     serverKilled = true;
-    listCloseAndDestroy(sdContainer);
+    
     if(pthread_attr_destroy(&threadAttributes) != 0){
         write(STDERR_FILENO,"Error on attributes destroy",28);
     }
 
     //Main thread should wait until all threads end with pthread_exit()
-    sleep(1);
+    //Change sleep with syncro mechanism, such as conditional variable or recursive mutex
+    sleep(5);
+
+    destroyBSTHostInfo();
+    listCloseAndDestroy(sdContainer);
+
     exit(-2);
 } 
 
@@ -43,24 +55,22 @@ void initBSTHostInfo(void){
     bstHostInfo = (BSTHostInfo *)malloc(sizeof(BSTHostInfo));
     bstHostInfo->root = NULL;
 
-    pthread_mutex_t mutex;
     pthread_mutex_init(&bstHostInfo->mutex,NULL);
-}
-
-void destroyBSTHostInfo(void){
-    pthread_mutex_destroy(&bstHostInfo->mutex);
-    bstDestroy(bstHostInfo->root);
-    free(bstHostInfo);
 }
 
 void * handleAgent(void * arg){
     agentInfo * info = (agentInfo *)arg;
+    bool inserted = false;
+
+    time_t timer;
+    char * currentTime;
 
     int socketAgent = info->sd;
-
+    int localKey;
+    BSTNode * node;
     unsigned long read_buffer[3];
 
-    printf("\nTHREAD - Instant: %s HOST: %s\n", info->instant, info->id);
+    printf("\nTHREAD - Instant: %s HOST: %s\n", info->time, info->idhost);
 
     while(!serverKilled){
         //Pulizia buffer di lettura
@@ -69,17 +79,48 @@ void * handleAgent(void * arg){
         if(read(socketAgent,read_buffer,sizeof(read_buffer))==0){
             printf("Agent has disconnected!\n");
 
-            free(info->id);
-            //free(info->instant);
+            free(info->idhost);
             free(info);
 
             pthread_exit(NULL);
             break;
         }
 
-        printf("\nUptime: %lu Freeram: %lu Procs: %lu\n", read_buffer[0], read_buffer[1], read_buffer[2]); 
+        //Get time
+        time(&timer);
+        currentTime = ctime(&timer);
+
+        printf("\nUptime: %lu Freeram: %lu Procs: %lu\n", read_buffer[UPTIME], read_buffer[FREERAM], read_buffer[PROCS]); 
+
+        pthread_mutex_lock(&bstHostInfo->mutex);
+
+            if(!inserted){ //First insertion of this agent
+                node = newNode(globalKey,info->idhost,info->time,read_buffer[UPTIME],read_buffer[FREERAM],read_buffer[PROCS]);
+                bstHostInfo->root = bstInsert(bstHostInfo->root,node);
+                localKey = globalKey;
+                globalKey++;
+                inserted = true;
+                bstPrint(bstHostInfo->root);
+                printf("\n");
+            }
+            else{ //Update of this agent (still connected)
+                node = newNode(localKey,info->idhost,currentTime,read_buffer[UPTIME],read_buffer[FREERAM],read_buffer[PROCS]); 
+
+                printf("\n*** Before update: %s\n", node->idhost);
+                bstUpdate(bstHostInfo->root,node);
+
+                printf("Ho aggiornato l'host. Albero:\n");
+                bstPrint(bstHostInfo->root);
+                printf("\n");
+            }
+
+        pthread_mutex_unlock(&bstHostInfo->mutex);
+
     }
 
+    free(info->idhost);
+    free(info);
+    printf("\nSto killando dolcemente...\n");
     pthread_exit(NULL);
 }
 
@@ -173,8 +214,8 @@ int main(int argc, char * argv[]){
             //Prepare struct to pass to thread
             agentInfo * info = (agentInfo *)malloc(sizeof(agentInfo));
             info->sd = sdAgent2;
-            info->instant = instant;
-            info->id = idAgent;
+            info->time = instant;
+            info->idhost = idAgent;
 
             pthread_create(&tid,&threadAttributes,handleAgent,info);
             

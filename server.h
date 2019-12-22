@@ -24,10 +24,14 @@
 #define MIN_PORT 1024
 #define MAX_PORT 65535 
 
+#define UPTIME 0
+#define FREERAM 1
+#define PROCS 2
+
 typedef struct agentInfo{
     int sd;
-    char * instant;
-    char * id;
+    char * time;
+    char * idhost;
 } agentInfo;
 
 typedef struct BSTHostInfo{
