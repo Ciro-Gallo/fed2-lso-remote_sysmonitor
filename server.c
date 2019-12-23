@@ -9,6 +9,31 @@ bool serverKilled = false;
 BSTHostInfo * bstHostInfo;
 
 
+ssize_t readn(int fd, void * vptr, size_t n){
+    size_t nleft;
+    ssize_t nread;
+    char * ptr;
+
+    ptr = vptr;
+    nleft = n;
+
+    while(nleft > 0){
+        if((nread = read(fd,ptr,nleft)) < 0){
+            if(errno == EINTR)
+                nread = 0;
+            else
+                return -1;
+        }
+        else if(nread == 0)
+            return -2; //Socket broken
+
+        nleft -= nread;
+        ptr += nread;
+    }
+
+    return (n - nleft); 
+}
+
 void destroyBSTHostInfo(void){
     pthread_mutex_destroy(&bstHostInfo->mutex);
     bstDestroy(bstHostInfo->root);
@@ -112,7 +137,7 @@ void * handleAgent(void * arg){
         memset(read_buffer,0,sizeof(read_buffer));
 
         //If agent closes socket, then wait 6 seconds and check if it has reconnected.
-        if(read(socketAgent,read_buffer,sizeof(read_buffer)) == 0){
+        if(readn(socketAgent,read_buffer,sizeof(read_buffer)) == -2){
             sleep(6);
 
             nodeFound = bstSearch(bstHostInfo->root,localKey);
@@ -121,24 +146,29 @@ void * handleAgent(void * arg){
                 printf("Agent set to disconnected!\n");
                 bstSetState(bstHostInfo->root,localKey,false);
             }
+            //Print bst
             bstPrint(bstHostInfo->root);
+            free(lastTime);
 
-            pthread_exit(NULL);
+            //pthread_exit(NULL);
             break;
         }
-
+        
         //printf("\nUptime: %lu Freeram: %lu Procs: %lu\n", read_buffer[UPTIME], read_buffer[FREERAM], read_buffer[PROCS]); 
 
         pthread_mutex_lock(&bstHostInfo->mutex);
             
             node = newNode(localKey,info->idhost,currentTime,read_buffer[UPTIME],read_buffer[FREERAM],read_buffer[PROCS]);
+            
+            if(inserted)
+                free(lastTime);
 
             lastTime = (char *)malloc(sizeof(char)*(strlen(currentTime)+1));
             strcpy(lastTime,currentTime);
 
             if(!inserted){ //First insertion of this agent
                 if(bstSetState(bstHostInfo->root,localKey,true)){
-                    //Agent is already in the structure, just update infos.
+                    //Agent has reconnected: it is already in the structure, just update infos.
                     bstUpdate(bstHostInfo->root,node);
                 }
                 else{
