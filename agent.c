@@ -32,7 +32,7 @@ ssize_t writen(int sd, const void* vptr, size_t n) {
     nleft = n;
 
     while(nleft > 0) {
-        if( (nwritten = write(sd,ptr,nleft) <= 0) ) {
+        if( (nwritten = write(sd,ptr,nleft)) <= 0 ) {
             if( nwritten < 0 && errno == EINTR ) 
                 nwritten = 0;
             else 
