@@ -5,15 +5,17 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <signal.h>
-#include <errno.h>><
+#include <errno.h>
 
 #define MIN_PORT 1024
 #define MAX_PORT 65535
 #define BUFFSIZE 4096
+
 
 int sd;
 
@@ -87,7 +89,7 @@ int main(int args, char** argv) {
 
     struct sockaddr_in myaddress;
     int port = argToInt(argv[1]);
-    char * buf[BUFFSIZE];
+    
 
 
     myaddress.sin_family = AF_INET;
@@ -103,20 +105,38 @@ int main(int args, char** argv) {
         perror("Error during the connection\n");
         exit (-1);
     }
+    printf("Connected\n");
 
-    int ret = readn(sd,buf,sizeof(buf));
-    if( ret == -2 ) {
-        //readed 0 bytes
-    } else if( ret < 0 ) {
-        perror("Error reading\n");
+
+
+    char buf[BUFFSIZE];
+    if( read(sd,buf,BUFFSIZE) < 0 ) {
+        perror("error reading\n");
     }
+    printf("%s\n",buf);
 
-
-    while(1) {
-
-
+    memset(buf,0,BUFFSIZE);
+    if( read(sd,buf,BUFFSIZE) < 0 ) {
+        perror("error reading\n");
     }
+    printf("%s\n\n",buf);
 
+
+
+  /*  bool stillReading = true;
+    int lenBuf[1];
+   
+    //For getting the host list from the server
+    while(stillReading) {
+        read(sd,lenBuf,sizeof(lenBuf));
+        if(lenBuf[0] == 0) {
+            stillReading = false;
+        } else {
+            char * buf[lenBuf[0]];
+            read(sd,buf,sizeof(buf));
+            write(STDOUT_FILENO,buf,sizeof(buf));
+        }
+    } */
 
     return 0;
 }
