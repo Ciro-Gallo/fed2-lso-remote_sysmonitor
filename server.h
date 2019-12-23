@@ -14,8 +14,11 @@
 #include <sys/sysinfo.h>
 #include <arpa/inet.h> 
 #include <netdb.h>
+#include <sys/time.h>
+#include <errno.h>
 
 #include <pthread.h>
+#include <limits.h>
 
 #include "bst.h"
 #include "list.h"
@@ -32,6 +35,7 @@ typedef struct agentInfo{
     int sd;
     char * time;
     char * idhost;
+    char * IP;
 } agentInfo;
 
 typedef struct BSTHostInfo{

@@ -2,7 +2,7 @@
 #include "bst.h"
 
 
-BSTNode * newNode(int key,char * idhost,char * time,unsigned long uptime,unsigned long freeram,unsigned long procs){
+BSTNode * newNode(long key,char * idhost,char * time,unsigned long uptime,unsigned long freeram,unsigned long procs){
     BSTNode * newNode = (BSTNode *)malloc(sizeof(BSTNode));
 
     newNode->key = key;
@@ -39,7 +39,7 @@ void bstDestroy(BSTNode * root) {
     }
 }
 
-BSTNode * bstSearch(BSTNode * root, int key) { 
+BSTNode * bstSearch(BSTNode * root, long key) { 
     if (root == NULL || root->key == key) 
        return root; 
      
@@ -66,7 +66,8 @@ BSTNode * bstInsert(BSTNode * root, BSTNode * data) {
 void bstPrint(BSTNode * root){
     if(root != NULL){
         bstPrint(root->sx);
-        printf("Key: %d Host: %s Uptime: %lu Time: %s", root->key, root->idhost, root->uptime, root->time);
+        printf("Key: %ld\nHost: %s\nState: %d\nTime: %s\n", root->key, root->idhost, root->connected,root->time);
+        printf("Freeram: %lu\nUptime: %lu\nProcs: %lu\n\n", root->freeram, root->uptime, root->procs);
         bstPrint(root->dx);
     }
 }
@@ -99,7 +100,7 @@ bool bstUpdate(BSTNode * root,BSTNode * data){
 }
 
 
-bool bstSetState(BSTNode * root,int key,bool state){
+bool bstSetState(BSTNode * root,long key,bool state){
     if(root != NULL){
         if (root->key == key){
             //Set state
