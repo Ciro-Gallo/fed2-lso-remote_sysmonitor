@@ -12,6 +12,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <signal.h>
+#include <errno.h>
 
 #define MIN_PORT 1024
 #define MAX_PORT 65535
@@ -21,6 +22,28 @@
 #define PROCS 2
 
 int sd;
+
+ssize_t writen(int sd, const void* vptr, size_t n) {
+    size_t nleft;
+    ssize_t nwritten;
+    const char* ptr;
+
+    ptr = vptr;
+    nleft = n;
+
+    while(nleft > 0) {
+        if( (nwritten = write(sd,ptr,nleft) <= 0) ) {
+            if( nwritten < 0 && errno == EINTR ) 
+                nwritten = 0;
+            else 
+                return (-1);
+        }
+
+        nleft -= nwritten;
+        ptr += nwritten;
+    }
+    return (n);
+} 
 
 int argToInt(char* arg) {
     char* p = NULL;
@@ -97,7 +120,7 @@ int main(int args, char** argv) {
         buf[PROCS] = info.procs;
         printf("uptime = %lu freeram = %lu procs = %lu\n",buf[UPTIME],buf[FREERAM],buf[PROCS]);
         
-        if( write(sd,buf,sizeof(buf)) != sizeof(buf) ) {
+        if( writen(sd,buf,sizeof(buf)) == -1 ) {
             perror("Error writing\n");
             exit (-1);
         }
