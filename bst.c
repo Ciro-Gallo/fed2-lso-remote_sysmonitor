@@ -2,6 +2,13 @@
 #include "bst.h"
 
 
+//Should go into utility.c
+int strlen_custom(char * str){
+    if(str != NULL)
+        return strlen(str);
+    return 0;
+}
+
 BSTNode * newNode(long key,char * idhost,char * time,unsigned long uptime,unsigned long freeram,unsigned long procs){
     BSTNode * newNode = (BSTNode *)malloc(sizeof(BSTNode));
 
@@ -70,6 +77,45 @@ void bstPrint(BSTNode * root){
         printf("Freeram: %lu\nUptime: %lu\nProcs: %lu\n\n", root->freeram, root->uptime, root->procs);
         bstPrint(root->dx);
     }
+}
+
+char * bstGetHosts(BSTNode * root){
+    char * oldStrSx = NULL;
+    char * oldStrDx = NULL;
+    char * newStr = NULL;
+
+    if(root != NULL){
+
+        if(root->sx != NULL)
+            oldStrSx = bstGetHosts(root->sx);
+
+        if(root->dx != NULL)
+            oldStrDx = bstGetHosts(root->dx);
+
+        newStr = (char *)malloc(sizeof(char)*(strlen_custom(oldStrSx)+strlen_custom(oldStrDx)+strlen_custom(root->idhost)+(sizeof(char)*DIM_STATE)+4));
+
+        if(root->sx != NULL || root->dx != NULL){
+            if(root->sx != NULL)
+                strcat(newStr,oldStrSx);
+
+            newStr[(int)strlen(newStr)] = '\n';
+
+            if(root->dx != NULL)
+                strcat(newStr,oldStrDx);
+        }
+
+        strcat(newStr,root->idhost);
+
+        if(root->connected)
+            strcat(newStr," connected");
+        else
+            strcat(newStr," disconnected");
+
+        return newStr;
+    }
+
+    //Never call on NULL child
+    return NULL;
 }
 
 
