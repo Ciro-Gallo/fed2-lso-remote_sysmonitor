@@ -92,18 +92,19 @@ char * bstGetHosts(BSTNode * root){
         if(root->dx != NULL)
             oldStrDx = bstGetHosts(root->dx);
 
-        newStr = (char *)malloc(sizeof(char)*(strlen_custom(oldStrSx)+strlen_custom(oldStrDx)+strlen_custom(root->idhost)+(sizeof(char)*DIM_STATE)+4));
+        newStr = (char *)malloc(sizeof(char)*(strlen_custom(oldStrSx)+strlen_custom(oldStrDx)+strlen_custom(root->idhost)+(sizeof(char)*DIM_STATE)+5));
 
-        if(root->sx != NULL || root->dx != NULL){
-            if(root->sx != NULL)
-                strcat(newStr,oldStrSx);
-
+        if(root->sx != NULL){
+            strcat(newStr,oldStrSx);
             newStr[(int)strlen(newStr)] = '\n';
-
-            if(root->dx != NULL)
-                strcat(newStr,oldStrDx);
         }
 
+        if(root->dx != NULL){
+            strcat(newStr,oldStrDx);
+            newStr[(int)strlen(newStr)] = '\n';
+        }
+
+        //Concatenates local informations
         strcat(newStr,root->idhost);
 
         if(root->connected)
@@ -111,10 +112,11 @@ char * bstGetHosts(BSTNode * root){
         else
             strcat(newStr," disconnected");
 
+
         return newStr;
     }
 
-    //Never called on NULL child
+    //Never (recursively) called on NULL child
     return NULL;
 }
 
