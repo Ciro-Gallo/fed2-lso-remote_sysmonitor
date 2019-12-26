@@ -65,6 +65,14 @@ void destroyBSTHostInfo(void){
     free(bstHostInfo);
 }
 
+void initBSTHostInfo(void){
+    bstHostInfo = (BSTHostInfo *)malloc(sizeof(BSTHostInfo));
+    bstHostInfo->root = NULL;
+
+    pthread_mutex_init(&bstHostInfo->mutex,NULL);
+}
+
+//Takes a string and converts it to a number.
 long parseInt(char *arg) {
   char *p = NULL;
   long result = (long) strtol(arg, &p, 10);
@@ -73,6 +81,7 @@ long parseInt(char *arg) {
   return result;
 } 
 
+//Takes a string representing an IP and converts it to a number.
 long parseIP(char * IP){
     int len = strlen(IP);
     char * newIP = (char *)malloc(sizeof(char)*(len-2)); //Length of IP minus 3 dots
@@ -98,7 +107,8 @@ long parseIP(char * IP){
     return newIPInt;
 }
 
-
+//Terminates the process with the exit status specified by "err". 
+//Uses perror function to print a message describing the meaning of the value of errno.
 void error(char * msg,int err){
     perror(msg);
     exit(err);
@@ -108,12 +118,6 @@ void sigpipeHandler(int code){
     write(STDOUT_FILENO,"Ho catturato SIGPIPE!\n",23);
 }
 
-void initBSTHostInfo(void){
-    bstHostInfo = (BSTHostInfo *)malloc(sizeof(BSTHostInfo));
-    bstHostInfo->root = NULL;
-
-    pthread_mutex_init(&bstHostInfo->mutex,NULL);
-}
 
 void sigintHandler(int code){
     write(STDOUT_FILENO,"\nHo catturato SIGINT!\n",22);
@@ -352,6 +356,7 @@ void * handleAgentStub(void * arg){
     }
 }
 
+//Takes a string representig a port in the range MIN_PORT MAX_PORT and returns it as integer.
 int parsePort(char * portToParse){
     int port = parseInt(portToParse);
 
@@ -378,7 +383,7 @@ int main(int argc, char * argv[]){
     }
     
     int port_agent = parsePort(argv[1]);
-    
+
     int port_client = parsePort(argv[2]);
 
     printf("\nServer listening on ports %d (agents), %d (clients)...\n\n", port_agent, port_client);
