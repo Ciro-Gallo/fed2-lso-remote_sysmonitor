@@ -151,9 +151,9 @@ void * handleClient(void * arg){
     while(bstHostInfo->root == NULL){}
     
     pthread_mutex_lock(&bstHostInfo->mutex);
-        
+
         char * hosts = bstGetHosts(bstHostInfo->root);
-        printf("Ho calcolato: %s\n", hosts);
+        printf("List to send to client: %s\n", hosts);
     
     pthread_mutex_unlock(&bstHostInfo->mutex);
 
@@ -174,54 +174,13 @@ void * handleClientStub(void * arg){
 
     pthread_t tid;
     int sdClientLocal; 
-/*
-    char * idClient;
-    char * instant;
-    char * clientIP;
 
-    time_t timer;
-    agentInfo * info;
-*/
     while(1){
 
         sdClientLocal = accept(sdClient,(struct sockaddr *)&client_addr,&size_client_addr);
 
         if(sdClientLocal != -1){
-/*
-            //Get time
-            time(&timer);
-            instant = ctime(&timer);
-            
-            //Get hostname or IP (if host not available)
-            inClientAddress = client_addr.sin_addr;
 
-            printf("\nClient IP before resolution: %s\n", inet_ntoa(client_addr.sin_addr));
-
-            clientInfo = gethostbyaddr(&inClientAddress,sizeof(inClientAddress),AF_INET);
-
-            //Get agent's IP as string
-            clientIP = (char *)malloc(sizeof(char)*(strlen(inet_ntoa(client_addr.sin_addr))+1));
-            strcpy(clientIP,inet_ntoa(client_addr.sin_addr));
-
-            if(clientInfo != NULL){
-                idClient = (char *)malloc(sizeof(char)*(strlen(clientInfo->h_name)+1));
-                strcpy(idClient,clientInfo->h_name);
-            }
-            else{
-                //error("gethostfun",h_errno);
-                idClient = (char *)malloc(sizeof(char)*(strlen(clientIP)+1));
-                strcpy(idClient,clientIP);
-                printf("Resolution failed. IP: %s\n", idClient);
-            }
-
-            //Prepare struct to pass to thread
-            info = (agentInfo *)malloc(sizeof(agentInfo));
-
-            info->sd = sdClient;
-            info->time = instant;
-            info->idhost = idClient;
-            info->IP = clientIP;
-*/
             printf("Client has connected!\n");
 
             pthread_create(&tid,&threadAttributes,handleClient,&sdClientLocal);
@@ -342,7 +301,6 @@ void * handleAgentStub(void * arg){
 
     time_t timer;
     agentInfo * info;
-    pthread_attr_t threadAttributesLocal;
 
     while(1){
 
@@ -394,6 +352,17 @@ void * handleAgentStub(void * arg){
     }
 }
 
+int parsePort(char * portToParse){
+    int port = parseInt(portToParse);
+
+    if(port<MIN_PORT || port>MAX_PORT){ //Fallita la conversione o porta non compresa nel range
+        printf("usage: ./program <port_agent> <port_client>. Insert valid port!\n");
+        exit(1);
+    }
+
+    return port;
+}
+
 
 int main(int argc, char * argv[]){
 
@@ -403,31 +372,16 @@ int main(int argc, char * argv[]){
     //Redirect stderr to stdout
     dup2(STDOUT_FILENO,STDERR_FILENO);
 
-    if(argv[1]==NULL){
+    if(argv[1]==NULL || argv[2]==NULL){
         printf("usage: %s <port_agent> <port_client>\n", argv[0]);
         exit(1);
     }
     
-    int port_agent = parseInt(argv[1]);
+    int port_agent = parsePort(argv[1]);
+    
+    int port_client = parsePort(argv[2]);
 
-    if(port_agent<MIN_PORT || port_agent>MAX_PORT){ //Fallita la conversione o porta non compresa nel range
-        printf("usage: %s <port_agent> <port_client>. Insert valid port!\n", argv[0]);
-        exit(1);
-    }
-
-    if(argv[2]==NULL){
-        printf("usage: %s <port_agent> <port_client>\n", argv[0]);
-        exit(1);
-    }
-
-    int port_client = parseInt(argv[2]);
-
-    if(port_client<MIN_PORT || port_client>MAX_PORT){ //Fallita la conversione o porta non compresa nel range
-        printf("usage: %s <port_agent> <port_client>. Insert valid port!\n", argv[0]);
-        exit(1);
-    }
-
-    printf("\nServer listening on port %d...\n\n", port_agent);
+    printf("\nServer listening on ports %d (agents), %d (clients)...\n\n", port_agent, port_client);
 
     //Declaring variables
     struct sockaddr_in server_addr;
@@ -478,7 +432,7 @@ int main(int argc, char * argv[]){
 
     //Init struct containing mutex and bst root
     initBSTHostInfo();
-    //Create list cointaining sd and tid
+    //Create list that will contain socket descriptors and thread ids
     sdContainer = listCreate();
 
     pthread_t tid_agent, tid_client;
@@ -493,8 +447,6 @@ int main(int argc, char * argv[]){
         error("Error creating stub thread for client\n",-3);
     }
 
-    while(1){
-
-    }
+    while(1){}
 
 }

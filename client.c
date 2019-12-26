@@ -90,8 +90,6 @@ int main(int args, char** argv) {
     struct sockaddr_in myaddress;
     int port = argToInt(argv[1]);
     
-
-
     myaddress.sin_family = AF_INET;
     myaddress.sin_port = htons(port);
     inet_aton(argv[2],&myaddress.sin_addr);

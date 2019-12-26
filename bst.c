@@ -114,7 +114,7 @@ char * bstGetHosts(BSTNode * root){
         return newStr;
     }
 
-    //Never call on NULL child
+    //Never called on NULL child
     return NULL;
 }
 
