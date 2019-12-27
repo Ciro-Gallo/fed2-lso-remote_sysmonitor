@@ -129,8 +129,7 @@ void sigintHandler(int code){
 
     //Main thread should wait until all threads end with pthread_exit()
     //TODO: Change sleep with syncro mechanism, such as conditional variable or recursive mutex
-    sleep(5);
-
+    sleep(2);
 
     destroyBSTHostInfo();
     listCloseAndDestroy(sdContainer);
@@ -144,42 +143,110 @@ void * handleClient(void * arg){
 
     char * state;
     if(bstHostInfo->root == NULL)
-        state = "There are no agents. Waiting for at least one registered host...";
+        state = "There are no agents. Waiting for at least one registered host...\0";
     else
-        state = "List of registered hosts. Pick one:\n";
+        state = "List of registered hosts. Pick one:\n\0";
 
-    if(writen(socketClient,state,strlen(state)) <= 0){
+    if(writen(socketClient,state,strlen(state)+1) <= 0){
         printf("Errore nella writen2!\n");
     }
 
     while(bstHostInfo->root == NULL){}
     
-    pthread_mutex_lock(&bstHostInfo->mutex);
+    char read_buff[BUFFSIZE];
+    struct hostent * host;
+    int nread;
+    char * hosts;
+    long hostIP;
+    BSTNode * hostNode;
+    unsigned long buffInfo[3];
 
-        char * hosts = bstGetHosts(bstHostInfo->root);
-        printf("List to send to client: %s\n", hosts);
-    
-    pthread_mutex_unlock(&bstHostInfo->mutex);
+    while(!serverKilled){
+        
+        if(readn(socketClient,read_buff,6) < 0){
+            perror("error reading\n");
+        }
 
-    if(writen(socketClient,hosts,strlen(hosts)) <= 0){
-        printf("Errore nella writen2!\n");
+        pthread_mutex_lock(&bstHostInfo->mutex);
+
+            hosts = bstGetHosts(bstHostInfo->root);
+            printf("List to send to client:\n %s\n", hosts);
+        
+        pthread_mutex_unlock(&bstHostInfo->mutex);
+
+        printf("I'm writing %s\n", hosts);
+        //Send hosts list to client
+        if(write(socketClient,hosts,strlen(hosts)) <= 0){
+            printf("Errore nella writen2!\n");
+        }
+        free(hosts);
+        printf("After writing...\n");
+
+        memset(read_buff,0,BUFFSIZE);
+        //Read the choice from client
+        if((nread=read(socketClient,read_buff,BUFFSIZE)) < 0){
+            perror("error reading\n");
+        }
+        else if(nread == 0){
+            break;
+        }
+
+        read_buff[strlen(read_buff)] = '\0';
+
+        host = gethostbyname(read_buff);
+        printf("IP host: %s\n", inet_ntoa(*(struct in_addr *)host->h_addr_list[0]));
+        
+        hostIP = parseIP(inet_ntoa(*(struct in_addr *)host->h_addr_list[0]));
+
+        hostNode = bstSearch(bstHostInfo->root,hostIP);
+
+        //Clean buffer
+        memset(read_buff,0,BUFFSIZE);
+
+        if(hostNode != NULL){
+            if(hostNode->connected){
+                strcpy(read_buff,"connected\0");
+                write(socketClient,read_buff,strlen(read_buff)+1);                
+
+                buffInfo[UPTIME] = hostNode->uptime;
+                buffInfo[FREERAM] = hostNode->freeram;
+                buffInfo[PROCS] = hostNode->procs;
+
+                printf("SENT-> Uptime: %lu Freeram: %lu Procs: %lu\n", buffInfo[UPTIME], buffInfo[FREERAM], buffInfo[PROCS]);
+
+                if( writen(socketClient,buffInfo,sizeof(buffInfo)) == -1 ) {
+                    perror("Error writing\n");
+                    exit (-1);
+                }
+            }
+            else{
+                strcpy(read_buff,"disconnected\0");
+                write(socketClient,read_buff,strlen(read_buff)+1);  
+
+                printf("SENT-> %s\n", hostNode->time);
+
+                if( writen(socketClient,hostNode->time,strlen(hostNode->time)+1) == -1 ) {
+                    perror("Error writing\n");
+                    exit (-1);
+                }
+            }
+        }
     }
 
-    return NULL;
-
+    printf("Client kill...\n");
+    pthread_exit(NULL);
 }
 
 void * handleClientStub(void * arg){
 
     struct sockaddr_in client_addr;
     
-
     socklen_t size_client_addr = sizeof(client_addr);
 
     pthread_t tid;
     int sdClientLocal; 
 
-    while(1){
+    while(!serverKilled){
 
         sdClientLocal = accept(sdClient,(struct sockaddr *)&client_addr,&size_client_addr);
 
@@ -195,6 +262,9 @@ void * handleClientStub(void * arg){
             error("Accept error!",1);
         }
     }
+
+    printf("ClientStub kill...\n");
+    pthread_exit(NULL);
 }
 
 void * handleAgent(void * arg){
@@ -236,7 +306,6 @@ void * handleAgent(void * arg){
             }
             //Print bst
             //bstPrint(bstHostInfo->root);
-            free(lastTime);
 
             //pthread_exit(NULL);
             break;
@@ -268,21 +337,22 @@ void * handleAgent(void * arg){
             }
             else{ //Update of this agent (still connected)
                 bstUpdate(bstHostInfo->root,node);
-                printf("Host updated!\n");
             }
 
             //bstPrint(bstHostInfo->root);
-            printf("\n");
+            //printf("\n");
 
         pthread_mutex_unlock(&bstHostInfo->mutex);
 
     }
 
+    free(lastTime);
     free(info->IP);
     free(info->idhost);
     free(info);
 
-    printf("\nSafe-killing thread...\n");
+
+    printf("Agent kill...\n");
     pthread_exit(NULL);
 }
 
@@ -306,7 +376,7 @@ void * handleAgentStub(void * arg){
     time_t timer;
     agentInfo * info;
 
-    while(1){
+    while(!serverKilled){
 
         sdAgent2 = accept(sdAgent,(struct sockaddr *)&agent_addr,&size_agent_addr);
 
@@ -354,6 +424,9 @@ void * handleAgentStub(void * arg){
             error("Accept error!",1);
         }
     }
+    
+    printf("AgentStub kill...\n");
+    pthread_exit(NULL);
 }
 
 //Takes a string representig a port in the range MIN_PORT MAX_PORT and returns it as integer.
@@ -422,7 +495,7 @@ int main(int argc, char * argv[]){
         error("Error binding address!\n",1);
     }
 
-    if(listen(sdClient,5) == -1){
+    if(listen(sdClient,MAX_CONN_NUMBER) == -1){
         error("Error in listening!\n",1);
     }
 
