@@ -126,10 +126,19 @@ void sigintHandler(int code){
     if(pthread_attr_destroy(&threadAttributes) != 0){
         write(STDERR_FILENO,"Error on attributes destroy",28);
     }
+    if(shutdown(sdAgent,SHUT_RD)<0){
+        perror("Error during shutdown of agent socket!\n");
+    }
+    if(close(sdAgent)<0){
+        perror("Error closing agent socket!\n");
+    }
+    if(close(sdClient)<0){
+        perror("Error closing agent socket!\n");
+    }
 
     //Main thread should wait until all threads end with pthread_exit()
     //TODO: Change sleep with syncro mechanism, such as conditional variable or recursive mutex
-    sleep(2);
+    sleep(5);
 
     destroyBSTHostInfo();
     listCloseAndDestroy(sdContainer);
@@ -379,7 +388,7 @@ void * handleAgentStub(void * arg){
     while(!serverKilled){
 
         sdAgent2 = accept(sdAgent,(struct sockaddr *)&agent_addr,&size_agent_addr);
-
+        
         if(sdAgent2 != -1){
 
             //Get time
@@ -421,7 +430,8 @@ void * handleAgentStub(void * arg){
             listInsert(sdContainer,sdAgent2,tid);
         }
         else{
-            error("Accept error!",1);
+            //error("Accept error!",1);
+            printf("Accept error agent stub!\n");
         }
     }
     
@@ -525,6 +535,8 @@ int main(int argc, char * argv[]){
         error("Error creating stub thread for client\n",-3);
     }
 
+    //Id sigint is sent, serverKilled is true. Break while cycle and send pthread kill signal to the stub threads. Then
+    //join them (to wait and don't have memory leaks).
     while(1){}
 
 }
