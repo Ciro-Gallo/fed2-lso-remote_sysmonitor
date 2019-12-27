@@ -19,6 +19,40 @@
 
 int sd;
 
+char** hostsToArray(char * buf) {
+    char ** arrayHost = (char**)malloc(sizeof(char*));
+    int i = 0,j = 0,k = 0;
+    int bytes = 0;
+
+    while(buf[i] != '\0') {
+        bytes++;
+
+        if(buf[i] == '\n') {
+            arrayHost =(char**)realloc(arrayHost,sizeof(arrayHost) + (sizeof(char*)));
+            arrayHost[j] = (char*)malloc(sizeof(char)*bytes);
+            bytes = 0;
+            j++;
+        }
+        i++;
+    }
+
+    i = 0;
+    j = 0;
+    while(buf[i] != '\0') {
+        if(buf[i] != '\n') {
+            arrayHost[j][k] = buf[i];
+            k++;
+        } else {
+            k = 0;
+            j++;
+        }
+        i++;
+    }
+
+    return arrayHost;
+}
+
+
 ssize_t readn(int sd, void* vptr, size_t n) {
     size_t nleft;
     ssize_t nread;
@@ -89,7 +123,6 @@ int main(int args, char** argv) {
 
     struct sockaddr_in myaddress;
     int port = argToInt(argv[1]);
-    
 
 
     myaddress.sin_family = AF_INET;
@@ -115,28 +148,15 @@ int main(int args, char** argv) {
     }
     printf("%s\n",buf);
 
-    memset(buf,0,BUFFSIZE);
-    if( read(sd,buf,BUFFSIZE) < 0 ) {
-        perror("error reading\n");
-    }
-    printf("%s\n\n",buf);
 
-
-
-  /*  bool stillReading = true;
-    int lenBuf[1];
-   
-    //For getting the host list from the server
-    while(stillReading) {
-        read(sd,lenBuf,sizeof(lenBuf));
-        if(lenBuf[0] == 0) {
-            stillReading = false;
-        } else {
-            char * buf[lenBuf[0]];
-            read(sd,buf,sizeof(buf));
-            write(STDOUT_FILENO,buf,sizeof(buf));
+    while(1) {
+        memset(buf,0,BUFFSIZE);
+        if( read(sd,buf,BUFFSIZE) < 0 ) {
+            perror("error reading\n");
         }
-    } */
+        char ** array = hostsToArray(buf);
+        printf("array[0] = %s  \narray[1] = %s\n",array[0],array[1]);
+    }
 
     return 0;
 }
