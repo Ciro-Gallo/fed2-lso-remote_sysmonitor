@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define DIM_STATE 13 //Length of string "disconnected"
+
 typedef struct BSTNode BSTNode;
 
 struct BSTNode{
@@ -30,3 +32,4 @@ BSTNode * bstInsert(BSTNode * root, BSTNode * data);
 void bstPrint(BSTNode * root);
 bool bstUpdate(BSTNode * root,BSTNode * data);
 bool bstSetState(BSTNode * root,long key,bool state);
+char * bstGetHosts(BSTNode * root);
