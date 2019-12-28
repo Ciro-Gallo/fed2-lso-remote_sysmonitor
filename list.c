@@ -47,10 +47,9 @@ void listCloseAndDestroy(node * head){
         listDestroy(head->next);
     }
     if(head->sd >=0 && head->tid >= 0){
-        close(head->sd);
-        //pthread_kill(head->tid,SIGINT);
+        close(head->sd);  
     }
-
+    
     nodeDestroy(head);
 }
 

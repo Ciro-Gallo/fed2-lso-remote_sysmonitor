@@ -35,7 +35,7 @@
 #define PROCS 2
 
 typedef struct agentInfo{
-    int sd;
+    int * sd;
     char * time;
     char * idhost;
     char * IP;

@@ -9,6 +9,8 @@ pthread_attr_t threadAttributes;
 bool serverKilled = false;
 BSTHostInfo * bstHostInfo;
 
+int threadsCounter = 0;
+pthread_mutex_t mutexThreadsCounter;
 
 ssize_t writen(int sd, const void* vptr, size_t n) {
     size_t nleft;
@@ -58,18 +60,20 @@ ssize_t readn(int fd, void * vptr, size_t n){
     return (n - nleft); 
 }
 
-void destroyBSTHostInfo(void){
-    pthread_mutex_destroy(&bstHostInfo->mutex);
-    bstDestroy(bstHostInfo->root);
+void destroyBSTHostInfo(BSTHostInfo * bstInfo){
+    pthread_mutex_destroy(&bstInfo->mutex);
+    bstDestroy(bstInfo->root);
 
-    free(bstHostInfo);
+    free(bstInfo);
 }
 
-void initBSTHostInfo(void){
-    bstHostInfo = (BSTHostInfo *)malloc(sizeof(BSTHostInfo));
-    bstHostInfo->root = NULL;
+BSTHostInfo * initBSTHostInfo(void){
+    BSTHostInfo * bstInfo = (BSTHostInfo *)malloc(sizeof(BSTHostInfo));
+    bstInfo->root = NULL;
 
-    pthread_mutex_init(&bstHostInfo->mutex,NULL);
+    pthread_mutex_init(&bstInfo->mutex,NULL);
+
+    return bstInfo;
 }
 
 //Takes a string and converts it to a number.
@@ -107,6 +111,20 @@ long parseIP(char * IP){
     return newIPInt;
 }
 
+//Atomic increment of counter shared by threads
+void incrementThreadCounter(int * counter){
+    pthread_mutex_lock(&mutexThreadsCounter);
+        *counter++;
+    pthread_mutex_unlock(&mutexThreadsCounter);
+}
+
+//Atomic increment of counter shared by threads
+void decrementThreadCounter(int * counter){
+    pthread_mutex_lock(&mutexThreadsCounter);
+        *counter--;
+    pthread_mutex_unlock(&mutexThreadsCounter);
+}
+
 //Terminates the process with the exit status specified by "err". 
 //Uses perror function to print a message describing the meaning of the value of errno.
 void error(char * msg,int err){
@@ -132,29 +150,25 @@ void sigintHandler(int code){
     if(close(sdClient)<0){
         perror("Error closing agent socket!\n");
     }
-
-    //Main thread should wait until all threads end with pthread_exit()
-    //TODO: Change sleep with syncro mechanism, such as conditional variable or recursive mutex
-    sleep(5);
-
-    destroyBSTHostInfo();
-    listCloseAndDestroy(sdContainer);
-
-    exit(-2);
 } 
 
 
 void * handleClient(void * arg){
     int socketClient = *(int *)arg;
-
     char * state;
+
+    incrementThreadCounter(&threadsCounter);
+
     if(bstHostInfo->root == NULL)
-        state = "There are no agents. Waiting for at least one registered host...\0";
+        state = "There are no agents. Waiting for at least one registered host...\n\0";
     else
         state = "List of registered hosts. Pick one:\n\0";
 
-    if(writen(socketClient,state,strlen(state)+1) <= 0){
+    int err;
+    if((err=write(socketClient,state,strlen(state)+1)) <= 0){
         printf("Errore nella writen2!\n");
+        printf("STATE: %s - ERROR: %d - SOCKETCLIENT: %d\n", state, err, socketClient);
+        perror("Errore nella write: ");
     }
 
     while(bstHostInfo->root == NULL){}
@@ -170,7 +184,7 @@ void * handleClient(void * arg){
     while(!serverKilled){
         
         if(readn(socketClient,read_buff,6) < 0){
-            perror("error reading\n");
+            perror("Error reading\n");
         }
 
         pthread_mutex_lock(&bstHostInfo->mutex);
@@ -222,7 +236,7 @@ void * handleClient(void * arg){
 
                 if( writen(socketClient,buffInfo,sizeof(buffInfo)) == -1 ) {
                     perror("Error writing\n");
-                    exit (-1);
+                    break;
                 }
             }
             else{
@@ -233,14 +247,18 @@ void * handleClient(void * arg){
 
                 if( writen(socketClient,hostNode->time,strlen(hostNode->time)+1) == -1 ) {
                     perror("Error writing\n");
-                    exit (-1);
+                    break;
                 }
             }
         }
     }
 
     printf("Client kill...\n");
-    pthread_exit(NULL);
+    free((int *)arg);
+    decrementThreadCounter(&threadsCounter);
+    //pthread_exit(NULL);
+
+    return NULL;
 }
 
 void * handleClientStub(void * arg){
@@ -250,33 +268,33 @@ void * handleClientStub(void * arg){
     socklen_t size_client_addr = sizeof(client_addr);
 
     pthread_t tid;
-    int sdClientLocal; 
+    int * sdClientLocal; 
+    int acceptResult;
 
     while(!serverKilled){
 
-        sdClientLocal = accept(sdClient,(struct sockaddr *)&client_addr,&size_client_addr);
+        acceptResult = accept(sdClient,(struct sockaddr *)&client_addr,&size_client_addr);
 
-        if(sdClientLocal != -1){
+        if(acceptResult != -1){
+            sdClientLocal = (int *)malloc(sizeof(int));
+            *sdClientLocal = acceptResult;
 
             printf("Client has connected!\n");
-
-            pthread_create(&tid,&threadAttributes,handleClient,&sdClientLocal);
+            printf("Dopo accept() %d\n", *sdClientLocal);
+            pthread_create(&tid,&threadAttributes,handleClient,sdClientLocal);
             
-            listInsert(sdContainer,sdClientLocal,tid);
-        }
-        else{
-            error("Accept error!",1);
+            listInsert(sdContainer,*sdClientLocal,tid);
         }
     }
 
     printf("ClientStub kill...\n");
-    pthread_exit(NULL);
+    return NULL;
 }
 
 void * handleAgent(void * arg){
     agentInfo * info = (agentInfo *)arg;
 
-    int socketAgent = info->sd;
+    int socketAgent = *(info->sd);
     bool inserted = false;
     time_t timer;
 
@@ -289,6 +307,8 @@ void * handleAgent(void * arg){
 
     unsigned long read_buffer[3];
     
+    incrementThreadCounter(&threadsCounter);
+
     //Set localKey to agent's IP.
     localKey = parseIP(info->IP);
 
@@ -353,13 +373,15 @@ void * handleAgent(void * arg){
     }
 
     free(lastTime);
+    free(info->sd);
     free(info->IP);
     free(info->idhost);
     free(info);
 
-
+    decrementThreadCounter(&threadsCounter);
     printf("Agent kill...\n");
-    pthread_exit(NULL);
+    //pthread_exit(NULL);
+    return NULL;
 }
 
 
@@ -373,7 +395,8 @@ void * handleAgentStub(void * arg){
     struct in_addr inAgentAddress;
 
     pthread_t tid;
-    int sdAgent2;
+    int * socketAgent;
+    int acceptResult;
 
     char * idAgent;
     char * instant;
@@ -383,10 +406,12 @@ void * handleAgentStub(void * arg){
     agentInfo * info;
 
     while(!serverKilled){
-
-        sdAgent2 = accept(sdAgent,(struct sockaddr *)&agent_addr,&size_agent_addr);
         
-        if(sdAgent2 != -1){
+        acceptResult = accept(sdAgent,(struct sockaddr *)&agent_addr,&size_agent_addr);
+        
+        if(acceptResult != -1){
+            socketAgent = (int *)malloc(sizeof(int));
+            *socketAgent = acceptResult;
 
             //Get time
             time(&timer);
@@ -417,23 +442,20 @@ void * handleAgentStub(void * arg){
             //Prepare struct to pass to thread
             info = (agentInfo *)malloc(sizeof(agentInfo));
 
-            info->sd = sdAgent2;
+            info->sd = socketAgent;
             info->time = instant;
             info->idhost = idAgent;
             info->IP = agentIP;
 
             pthread_create(&tid,&threadAttributes,handleAgent,info);
             
-            listInsert(sdContainer,sdAgent2,tid);
-        }
-        else{
-            //error("Accept error!",1);
-            printf("Accept error agent stub!\n");
+            listInsert(sdContainer,*socketAgent,tid);
         }
     }
     
     printf("AgentStub kill...\n");
-    pthread_exit(NULL);
+    //pthread_exit(NULL);
+    return NULL;
 }
 
 //Takes a string representig a port in the range MIN_PORT MAX_PORT and returns it as integer.
@@ -468,6 +490,8 @@ int main(int argc, char * argv[]){
 
     printf("\nServer listening on ports %d (agents), %d (clients)...\n\n", port_agent, port_client);
 
+    pthread_mutex_init(&mutexThreadsCounter,NULL);
+
     //Declaring variables
     struct sockaddr_in server_addr;
     struct sockaddr_in server_addr_client;
@@ -480,7 +504,8 @@ int main(int argc, char * argv[]){
     server_addr_client.sin_port = htons(port_client);
     server_addr_client.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    sdAgent = socket(PF_INET,SOCK_STREAM,0);
+    //Creates non blocking socket to avoid it blocking in accept()
+    sdAgent = socket(PF_INET,SOCK_STREAM | SOCK_NONBLOCK,0);
     
     if(sdAgent == -1)
         error("Error creating the socket!\n",1);
@@ -493,7 +518,7 @@ int main(int argc, char * argv[]){
         error("Error in listening!\n",1);
     }
 
-    sdClient = socket(PF_INET,SOCK_STREAM,0);
+    sdClient = socket(PF_INET,SOCK_STREAM | SOCK_NONBLOCK,0);
     
     if(sdClient == -1)
         error("Error creating the socket!\n",1);
@@ -506,7 +531,6 @@ int main(int argc, char * argv[]){
         error("Error in listening!\n",1);
     }
 
-
     if(pthread_attr_init(&threadAttributes) != 0){
         exit(-1);
     }
@@ -514,26 +538,39 @@ int main(int argc, char * argv[]){
         exit(-1);
     }
 
-
     //Init struct containing mutex and bst root
-    initBSTHostInfo();
+    bstHostInfo = initBSTHostInfo();
     //Create list that will contain socket descriptors and thread ids
     sdContainer = listCreate();
 
     pthread_t tid_agent, tid_client;
 
     //Creating stub thread for agent
-    if(pthread_create(&tid_agent,&threadAttributes,handleAgentStub,NULL) != 0){
+    if(pthread_create(&tid_agent,NULL,handleAgentStub,NULL) != 0){
         error("Error creating stub thread for agent\n",-3);
     }
 
     //Creating stub thread for client
-    if(pthread_create(&tid_client,&threadAttributes,handleClientStub,NULL) != 0){
+    if(pthread_create(&tid_client,NULL,handleClientStub,NULL) != 0){
         error("Error creating stub thread for client\n",-3);
     }
 
     //Id sigint is sent, serverKilled is true. Break while cycle and send pthread kill signal to the stub threads. Then
     //join them (to wait and don't have memory leaks).
-    while(1){}
+    while(!serverKilled || threadsCounter!=0){}
+
+    //Main thread should wait until all threads end with pthread_exit()
+    //TODO: Change sleep with syncro mechanism, such as conditional variable or recursive mutex
+    sleep(5);
+
+    pthread_join(tid_agent,NULL);
+    pthread_join(tid_client,NULL);
+
+    destroyBSTHostInfo(bstHostInfo);
+    printf("Destroying list...\n");
+    listCloseAndDestroy(sdContainer);
+    pthread_mutex_destroy(&mutexThreadsCounter);
+
+    return 0;
 
 }
