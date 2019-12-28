@@ -99,6 +99,7 @@ char * bstGetHosts(BSTNode * root){
         if(root->sx != NULL){
             newStr[0] = '\0';
             strcat(newStr,oldStrSx);
+            free(oldStrSx);
         }
 
         if(root->dx != NULL){
@@ -108,6 +109,7 @@ char * bstGetHosts(BSTNode * root){
                 newStr[strlen(newStr)] = '\0';
 
             strcat(newStr,oldStrDx);
+            free(oldStrDx);
         }
 
         //Concatenates local informations

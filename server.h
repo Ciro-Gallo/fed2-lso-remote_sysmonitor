@@ -16,6 +16,7 @@
 #include <netdb.h>
 #include <sys/time.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #include <pthread.h>
 #include <limits.h>
