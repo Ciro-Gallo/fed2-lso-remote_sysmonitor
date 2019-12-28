@@ -126,9 +126,6 @@ void sigintHandler(int code){
     if(pthread_attr_destroy(&threadAttributes) != 0){
         write(STDERR_FILENO,"Error on attributes destroy",28);
     }
-    if(shutdown(sdAgent,SHUT_RD)<0){
-        perror("Error during shutdown of agent socket!\n");
-    }
     if(close(sdAgent)<0){
         perror("Error closing agent socket!\n");
     }
