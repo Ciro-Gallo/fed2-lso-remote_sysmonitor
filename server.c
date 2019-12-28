@@ -65,6 +65,14 @@ void destroyBSTHostInfo(void){
     free(bstHostInfo);
 }
 
+void initBSTHostInfo(void){
+    bstHostInfo = (BSTHostInfo *)malloc(sizeof(BSTHostInfo));
+    bstHostInfo->root = NULL;
+
+    pthread_mutex_init(&bstHostInfo->mutex,NULL);
+}
+
+//Takes a string and converts it to a number.
 long parseInt(char *arg) {
   char *p = NULL;
   long result = (long) strtol(arg, &p, 10);
@@ -73,6 +81,7 @@ long parseInt(char *arg) {
   return result;
 } 
 
+//Takes a string representing an IP and converts it to a number.
 long parseIP(char * IP){
     int len = strlen(IP);
     char * newIP = (char *)malloc(sizeof(char)*(len-2)); //Length of IP minus 3 dots
@@ -98,7 +107,8 @@ long parseIP(char * IP){
     return newIPInt;
 }
 
-
+//Terminates the process with the exit status specified by "err". 
+//Uses perror function to print a message describing the meaning of the value of errno.
 void error(char * msg,int err){
     perror(msg);
     exit(err);
@@ -108,12 +118,6 @@ void sigpipeHandler(int code){
     write(STDOUT_FILENO,"Ho catturato SIGPIPE!\n",23);
 }
 
-void initBSTHostInfo(void){
-    bstHostInfo = (BSTHostInfo *)malloc(sizeof(BSTHostInfo));
-    bstHostInfo->root = NULL;
-
-    pthread_mutex_init(&bstHostInfo->mutex,NULL);
-}
 
 void sigintHandler(int code){
     write(STDOUT_FILENO,"\nHo catturato SIGINT!\n",22);
@@ -125,8 +129,7 @@ void sigintHandler(int code){
 
     //Main thread should wait until all threads end with pthread_exit()
     //TODO: Change sleep with syncro mechanism, such as conditional variable or recursive mutex
-    sleep(5);
-
+    sleep(2);
 
     destroyBSTHostInfo();
     listCloseAndDestroy(sdContainer);
@@ -140,88 +143,115 @@ void * handleClient(void * arg){
 
     char * state;
     if(bstHostInfo->root == NULL)
-        state = "There are no agents. Waiting for at least one registered host...";
+        state = "There are no agents. Waiting for at least one registered host...\0";
     else
-        state = "List of registered hosts. Pick one:\n";
+        state = "List of registered hosts. Pick one:\n\0";
 
-    if(writen(socketClient,state,strlen(state)) <= 0){
+    if(writen(socketClient,state,strlen(state)+1) <= 0){
         printf("Errore nella writen2!\n");
     }
 
     while(bstHostInfo->root == NULL){}
     
-    pthread_mutex_lock(&bstHostInfo->mutex);
-        
-        char * hosts = bstGetHosts(bstHostInfo->root);
-        printf("Ho calcolato: %s\n", hosts);
-    
-    pthread_mutex_unlock(&bstHostInfo->mutex);
+    char read_buff[BUFFSIZE];
+    struct hostent * host;
+    int nread;
+    char * hosts;
+    long hostIP;
+    BSTNode * hostNode;
+    unsigned long buffInfo[3];
 
-    if(writen(socketClient,hosts,strlen(hosts)) <= 0){
-        printf("Errore nella writen2!\n");
+    while(!serverKilled){
+        
+        if(readn(socketClient,read_buff,6) < 0){
+            perror("error reading\n");
+        }
+
+        pthread_mutex_lock(&bstHostInfo->mutex);
+
+            hosts = bstGetHosts(bstHostInfo->root);
+            printf("List to send to client:\n %s\n", hosts);
+        
+        pthread_mutex_unlock(&bstHostInfo->mutex);
+
+        printf("I'm writing %s\n", hosts);
+        //Send hosts list to client
+        if(write(socketClient,hosts,strlen(hosts)) <= 0){
+            printf("Errore nella writen2!\n");
+        }
+        free(hosts);
+        printf("After writing...\n");
+
+        memset(read_buff,0,BUFFSIZE);
+        //Read the choice from client
+        if((nread=read(socketClient,read_buff,BUFFSIZE)) < 0){
+            perror("error reading\n");
+        }
+        else if(nread == 0){
+            break;
+        }
+
+        read_buff[strlen(read_buff)] = '\0';
+
+        host = gethostbyname(read_buff);
+        printf("IP host: %s\n", inet_ntoa(*(struct in_addr *)host->h_addr_list[0]));
+        
+        hostIP = parseIP(inet_ntoa(*(struct in_addr *)host->h_addr_list[0]));
+
+        hostNode = bstSearch(bstHostInfo->root,hostIP);
+
+        //Clean buffer
+        memset(read_buff,0,BUFFSIZE);
+
+        if(hostNode != NULL){
+            if(hostNode->connected){
+                strcpy(read_buff,"connected\0");
+                write(socketClient,read_buff,strlen(read_buff)+1);                
+
+                buffInfo[UPTIME] = hostNode->uptime;
+                buffInfo[FREERAM] = hostNode->freeram;
+                buffInfo[PROCS] = hostNode->procs;
+
+                printf("SENT-> Uptime: %lu Freeram: %lu Procs: %lu\n", buffInfo[UPTIME], buffInfo[FREERAM], buffInfo[PROCS]);
+
+                if( writen(socketClient,buffInfo,sizeof(buffInfo)) == -1 ) {
+                    perror("Error writing\n");
+                    exit (-1);
+                }
+            }
+            else{
+                strcpy(read_buff,"disconnected\0");
+                write(socketClient,read_buff,strlen(read_buff)+1);  
+
+                printf("SENT-> %s\n", hostNode->time);
+
+                if( writen(socketClient,hostNode->time,strlen(hostNode->time)+1) == -1 ) {
+                    perror("Error writing\n");
+                    exit (-1);
+                }
+            }
+        }
     }
 
-    return NULL;
-
+    printf("Client kill...\n");
+    pthread_exit(NULL);
 }
 
 void * handleClientStub(void * arg){
 
     struct sockaddr_in client_addr;
     
-
     socklen_t size_client_addr = sizeof(client_addr);
 
     pthread_t tid;
     int sdClientLocal; 
-/*
-    char * idClient;
-    char * instant;
-    char * clientIP;
 
-    time_t timer;
-    agentInfo * info;
-*/
-    while(1){
+    while(!serverKilled){
 
         sdClientLocal = accept(sdClient,(struct sockaddr *)&client_addr,&size_client_addr);
 
         if(sdClientLocal != -1){
-/*
-            //Get time
-            time(&timer);
-            instant = ctime(&timer);
-            
-            //Get hostname or IP (if host not available)
-            inClientAddress = client_addr.sin_addr;
 
-            printf("\nClient IP before resolution: %s\n", inet_ntoa(client_addr.sin_addr));
-
-            clientInfo = gethostbyaddr(&inClientAddress,sizeof(inClientAddress),AF_INET);
-
-            //Get agent's IP as string
-            clientIP = (char *)malloc(sizeof(char)*(strlen(inet_ntoa(client_addr.sin_addr))+1));
-            strcpy(clientIP,inet_ntoa(client_addr.sin_addr));
-
-            if(clientInfo != NULL){
-                idClient = (char *)malloc(sizeof(char)*(strlen(clientInfo->h_name)+1));
-                strcpy(idClient,clientInfo->h_name);
-            }
-            else{
-                //error("gethostfun",h_errno);
-                idClient = (char *)malloc(sizeof(char)*(strlen(clientIP)+1));
-                strcpy(idClient,clientIP);
-                printf("Resolution failed. IP: %s\n", idClient);
-            }
-
-            //Prepare struct to pass to thread
-            info = (agentInfo *)malloc(sizeof(agentInfo));
-
-            info->sd = sdClient;
-            info->time = instant;
-            info->idhost = idClient;
-            info->IP = clientIP;
-*/
             printf("Client has connected!\n");
 
             pthread_create(&tid,&threadAttributes,handleClient,&sdClientLocal);
@@ -232,6 +262,9 @@ void * handleClientStub(void * arg){
             error("Accept error!",1);
         }
     }
+
+    printf("ClientStub kill...\n");
+    pthread_exit(NULL);
 }
 
 void * handleAgent(void * arg){
@@ -273,7 +306,6 @@ void * handleAgent(void * arg){
             }
             //Print bst
             //bstPrint(bstHostInfo->root);
-            free(lastTime);
 
             //pthread_exit(NULL);
             break;
@@ -305,21 +337,22 @@ void * handleAgent(void * arg){
             }
             else{ //Update of this agent (still connected)
                 bstUpdate(bstHostInfo->root,node);
-                printf("Host updated!\n");
             }
 
             //bstPrint(bstHostInfo->root);
-            printf("\n");
+            //printf("\n");
 
         pthread_mutex_unlock(&bstHostInfo->mutex);
 
     }
 
+    free(lastTime);
     free(info->IP);
     free(info->idhost);
     free(info);
 
-    printf("\nSafe-killing thread...\n");
+
+    printf("Agent kill...\n");
     pthread_exit(NULL);
 }
 
@@ -342,9 +375,8 @@ void * handleAgentStub(void * arg){
 
     time_t timer;
     agentInfo * info;
-    pthread_attr_t threadAttributesLocal;
 
-    while(1){
+    while(!serverKilled){
 
         sdAgent2 = accept(sdAgent,(struct sockaddr *)&agent_addr,&size_agent_addr);
 
@@ -392,6 +424,21 @@ void * handleAgentStub(void * arg){
             error("Accept error!",1);
         }
     }
+    
+    printf("AgentStub kill...\n");
+    pthread_exit(NULL);
+}
+
+//Takes a string representig a port in the range MIN_PORT MAX_PORT and returns it as integer.
+int parsePort(char * portToParse){
+    int port = parseInt(portToParse);
+
+    if(port<MIN_PORT || port>MAX_PORT){ //Fallita la conversione o porta non compresa nel range
+        printf("usage: ./program <port_agent> <port_client>. Insert valid port!\n");
+        exit(1);
+    }
+
+    return port;
 }
 
 
@@ -403,31 +450,16 @@ int main(int argc, char * argv[]){
     //Redirect stderr to stdout
     dup2(STDOUT_FILENO,STDERR_FILENO);
 
-    if(argv[1]==NULL){
+    if(argv[1]==NULL || argv[2]==NULL){
         printf("usage: %s <port_agent> <port_client>\n", argv[0]);
         exit(1);
     }
     
-    int port_agent = parseInt(argv[1]);
+    int port_agent = parsePort(argv[1]);
 
-    if(port_agent<MIN_PORT || port_agent>MAX_PORT){ //Fallita la conversione o porta non compresa nel range
-        printf("usage: %s <port_agent> <port_client>. Insert valid port!\n", argv[0]);
-        exit(1);
-    }
+    int port_client = parsePort(argv[2]);
 
-    if(argv[2]==NULL){
-        printf("usage: %s <port_agent> <port_client>\n", argv[0]);
-        exit(1);
-    }
-
-    int port_client = parseInt(argv[2]);
-
-    if(port_client<MIN_PORT || port_client>MAX_PORT){ //Fallita la conversione o porta non compresa nel range
-        printf("usage: %s <port_agent> <port_client>. Insert valid port!\n", argv[0]);
-        exit(1);
-    }
-
-    printf("\nServer listening on port %d...\n\n", port_agent);
+    printf("\nServer listening on ports %d (agents), %d (clients)...\n\n", port_agent, port_client);
 
     //Declaring variables
     struct sockaddr_in server_addr;
@@ -463,7 +495,7 @@ int main(int argc, char * argv[]){
         error("Error binding address!\n",1);
     }
 
-    if(listen(sdClient,5) == -1){
+    if(listen(sdClient,MAX_CONN_NUMBER) == -1){
         error("Error in listening!\n",1);
     }
 
@@ -478,7 +510,7 @@ int main(int argc, char * argv[]){
 
     //Init struct containing mutex and bst root
     initBSTHostInfo();
-    //Create list cointaining sd and tid
+    //Create list that will contain socket descriptors and thread ids
     sdContainer = listCreate();
 
     pthread_t tid_agent, tid_client;
@@ -493,8 +525,6 @@ int main(int argc, char * argv[]){
         error("Error creating stub thread for client\n",-3);
     }
 
-    while(1){
-
-    }
+    while(1){}
 
 }

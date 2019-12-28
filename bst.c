@@ -92,29 +92,39 @@ char * bstGetHosts(BSTNode * root){
         if(root->dx != NULL)
             oldStrDx = bstGetHosts(root->dx);
 
-        newStr = (char *)malloc(sizeof(char)*(strlen_custom(oldStrSx)+strlen_custom(oldStrDx)+strlen_custom(root->idhost)+(sizeof(char)*DIM_STATE)+4));
+        int dim = sizeof(char)*(strlen_custom(oldStrSx)+strlen_custom(oldStrDx)+strlen_custom(root->idhost)+(sizeof(char)*DIM_STATE)+(sizeof(char)*10));
+        newStr = (char *)malloc(dim);
+        memset(newStr,0,dim);
 
-        if(root->sx != NULL || root->dx != NULL){
-            if(root->sx != NULL)
-                strcat(newStr,oldStrSx);
-
-            newStr[(int)strlen(newStr)] = '\n';
-
-            if(root->dx != NULL)
-                strcat(newStr,oldStrDx);
+        if(root->sx != NULL){
+            newStr[0] = '\0';
+            strcat(newStr,oldStrSx);
         }
 
+        if(root->dx != NULL){
+            if(root->sx == NULL)
+                newStr[0] = '\0';
+            else
+                newStr[strlen(newStr)] = '\0';
+
+            strcat(newStr,oldStrDx);
+        }
+
+        //Concatenates local informations
+        if(root->dx == NULL && root->sx == NULL)
+            newStr[0] = '\0';
+        
         strcat(newStr,root->idhost);
 
         if(root->connected)
-            strcat(newStr," connected");
+            strcat(newStr," connected\n");
         else
-            strcat(newStr," disconnected");
+            strcat(newStr," disconnected\n");
 
         return newStr;
     }
 
-    //Never call on NULL child
+    //Never (recursively) called on NULL child
     return NULL;
 }
 
