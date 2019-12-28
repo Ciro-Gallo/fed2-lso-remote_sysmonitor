@@ -10,7 +10,6 @@
 typedef struct node node;
 
 struct node {
-    int sd;
     int tid;
 
     node * next;
@@ -19,9 +18,8 @@ struct node {
 
 node * listCreate();
 
-void listInsert(node * head,int sd,int tid);
+void listInsert(node * head, int tid);
 void listDestroy(node * head);
-void listCloseAndDestroy(node * head);
 void listPrint(node * head);
 
 
