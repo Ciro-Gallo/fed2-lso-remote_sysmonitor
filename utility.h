@@ -20,5 +20,6 @@
     ssize_t readn(int sd, void* vptr, size_t n);
     int argToInt(char* arg);
     void checkArgs(int args, char** argv);
+    void error(char * msg,const int std,int err);
 
 #endif
