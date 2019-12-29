@@ -1,5 +1,5 @@
-#ifndef AGENT_H
-    #define AGENT_H
+#ifndef AGENT_UTILITY_H
+    #define AGENT_UTILITY__H
     #include <sys/types.h>
     #include <sys/socket.h>
     #include <sys/sysinfo.h>
@@ -25,6 +25,10 @@
 
     int sd;
 
-
+    ssize_t writen(int sd, const void* vptr, size_t n);
+    int argToInt(char* arg);
+    void checkArgs(int args, char** argv);
+    void handleSigInt(int s);
+    void handleSigPipe(int s);
 
 #endif
