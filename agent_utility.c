@@ -1,61 +1,17 @@
  #include "agent_utility.h"
 
- ssize_t writen(int sd, const void* vptr, size_t n) {
-        size_t nleft;
-        ssize_t nwritten;
-        const char* ptr;
-
-        ptr = vptr;
-        nleft = n;
-
-        while(nleft > 0) {
-            if( (nwritten = write(sd,ptr,nleft)) <= 0 ) {
-                if( nwritten < 0 && errno == EINTR ) 
-                    nwritten = 0;
-                else 
-                    return (-1);
-            }
-
-            nleft -= nwritten;
-            ptr += nwritten;
-        }
-        return (n);
-    } 
-
-    int argToInt(char* arg) {
-        char* p = NULL;
-        int result = (int)strtol(arg,&p,10);
-        if(p == NULL || *p != '\0') {
-            return -1;
-        }
-        return result;
+  
+void handleSigInt(int s) {
+    if( close(sd) < 0 ) {
+        perror("Error closing socket\n");
     }
+    exit (-1);
+}
 
-    void checkArgs(int args, char** argv) {
-        if(args != 3) {
-            printf("usage: %s <port> <ipaddress>\n",argv[0]);
-            exit (-1);
-        }
-
-        int port = argToInt(argv[1]);
-
-        if(port < MIN_PORT || port > MAX_PORT) {
-            printf("port overcome the range \n");
-            exit (-1);
-        }
+void handleSigPipe(int s) {
+    if( close(sd) < 0 ) {
+        perror("Error closing socket\n");
     }
-
-    void handleSigInt(int s) {
-        if( close(sd) < 0 ) {
-            perror("Error closing socket\n");
-        }
-        exit (-1);
-    }
-
-    void handleSigPipe(int s) {
-        if( close(sd) < 0 ) {
-            perror("Error closing socket\n");
-        }
-        printf("Server disconnected\n");
-        exit (-1);
-    }
+    printf("Server disconnected\n");
+    exit (-1);
+}
