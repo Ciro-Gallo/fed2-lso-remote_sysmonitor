@@ -306,12 +306,11 @@ int main(int argc, char * argv[]){
     //Redirect stderr to stdout
     dup2(STDOUT_FILENO,STDERR_FILENO);
 
-    if(argv[1]==NULL || argv[2]==NULL){
+    if(argc != NUM_ARGS){
         printf("usage: %s <port_agent> <port_client>\n", argv[0]);
     }
     
     int port_agent = parsePort(argv[1]);
-
     int port_client = parsePort(argv[2]);
 
     printf("\nServer listening on ports %d (agents), %d (clients)...\n\n", port_agent, port_client);
@@ -332,27 +331,27 @@ int main(int argc, char * argv[]){
     sdAgent = socket(PF_INET,SOCK_STREAM | SOCK_NONBLOCK,0);
     
     if(sdAgent == -1)
-        error("Error creating the socket!\n",STDOUT_FILENO,1);
+        error("Error creating agent socket\n",STDERR_FILENO,ESOCK_CREATE);
 
     if(bind(sdAgent,(struct sockaddr *)&server_addr,sizeof(server_addr)) == -1){
-        error("Error creating the socket!\n",STDOUT_FILENO,1);
+        error("Error binding agent socket\n",STDERR_FILENO,ESOCK_BIND);
     }
 
     if(listen(sdAgent,5) == -1){
-        error("Error creating the socket!\n",STDOUT_FILENO,1);
+        error("Error preparing agent socket to accept connections\n",STDERR_FILENO,ESOCK_LISTEN);
     }
 
     sdClient = socket(PF_INET,SOCK_STREAM | SOCK_NONBLOCK,0);
     
     if(sdClient == -1)
-        error("Error creating the socket!\n",STDOUT_FILENO,1);
+        error("Error creating client socket\n",STDERR_FILENO,ESOCK_CREATE);
 
     if(bind(sdClient,(struct sockaddr *)&server_addr_client,sizeof(server_addr_client)) == -1){
-        error("Error creating the socket!\n",STDOUT_FILENO,1);
+        error("Error binding client socket\n",STDERR_FILENO,ESOCK_BIND);
     }
 
     if(listen(sdClient,MAX_CONN_NUMBER) == -1){
-        error("Error creating the socket!\n",STDOUT_FILENO,1);
+        error("Error preparing client socket to accept connections\n",STDERR_FILENO,ESOCK_LISTEN);
     }
 
     //Init struct containing mutex and bst root
@@ -364,12 +363,12 @@ int main(int argc, char * argv[]){
 
     //Creating stub thread for agent
     if(pthread_create(&tid_agent,NULL,handleAgentStub,NULL) != 0){
-        error("Error creating the socket!\n",STDOUT_FILENO,1);
+        error("Error creating stub thread for agent\n",STDERR_FILENO,ETHREAD_CREATE);
     }
 
     //Creating stub thread for client
     if(pthread_create(&tid_client,NULL,handleClientStub,NULL) != 0){
-        error("Error creating the socket!\n",STDOUT_FILENO,1);
+        error("Error creating stub thread for client\n",STDERR_FILENO,ETHREAD_CREATE);
     }
 
     while(!serverKilled){}
@@ -379,7 +378,6 @@ int main(int argc, char * argv[]){
 
     node * root = sdContainer->next;
     while(root != NULL){
-        printf("TID: %d\n", root->tid);
         pthread_join(root->tid,NULL);
         root = root->next;
     }

@@ -20,21 +20,26 @@
     #define PROCS 2
 
     #define ESOCK_CREATE 5
-    #define ESOCK_CONN 6
-    #define ESYS_INFO 7
-    #define EWRITE 8
-    #define EREAD 9
-    #define EIP_NOTVALID 10
-    #define EARGS_NOTVALID 11
-    #define EPORT_NOTVALID 12 
+    #define ESOCK_BIND 6
+    #define ESOCK_LISTEN 7
+    #define ESOCK_CONN 8
+
+    #define ESYS_INFO 9
+    #define EWRITE 10
+    #define EREAD 11
+    #define EIP_NOTVALID 12
+    #define EARGS_NOTVALID 13
+    #define EPORT_NOTVALID 14
+
+    #define ETHREAD_CREATE 15
     
     
-    void error(char * msg,const int std,int err);
     ssize_t writen(int sd, const void* vptr, size_t n);
     ssize_t readn(int sd, void* vptr, size_t n);
     
     int argToInt(char* arg);
     void checkArgs(int args, char** argv);
+    void error(char * msg,const int std,int err);
 
 
 #endif

@@ -13,6 +13,7 @@
 
     #define MAX_CONN_NUMBER 5
     #define BUFFSIZE 4096
+    #define NUM_ARGS 2
 
     typedef struct agentInfo{
         int * sd;
