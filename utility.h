@@ -16,8 +16,13 @@
     #define MIN_PORT 1024
     #define MAX_PORT 65535
 
+    #define UPTIME 0
+    #define FREERAM 1
+    #define PROCS 2
+
     ssize_t writen(int sd, const void* vptr, size_t n);
     ssize_t readn(int sd, void* vptr, size_t n);
+    
     int argToInt(char* arg);
     void checkArgs(int args, char** argv);
     void error(char * msg,const int std,int err);

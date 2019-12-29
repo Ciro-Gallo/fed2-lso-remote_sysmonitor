@@ -8,62 +8,6 @@ int sdClient;
 bool serverKilled = false;
 BSTHostInfo * bstHostInfo;
 
-ssize_t writen(int sd, const void* vptr, size_t n) {
-    size_t nleft;
-    ssize_t nwritten;
-    const char* ptr;
-
-    ptr = vptr;
-    nleft = n;
-
-    while(nleft > 0) {
-        if( (nwritten = write(sd,ptr,nleft)) <= 0) {
-            if( nwritten < 0 && errno == EINTR ) 
-                nwritten = 0;
-            else 
-                return (-1);
-        }
-
-        nleft -= nwritten;
-        ptr += nwritten;
-    }
-    return (n);
-}
-
-
-ssize_t readn(int fd, void * vptr, size_t n){
-    size_t nleft;
-    ssize_t nread;
-    char * ptr;
-
-    ptr = vptr;
-    nleft = n;
-
-    while(nleft > 0){
-        if((nread = read(fd,ptr,nleft)) < 0){
-            if(errno == EINTR) //errno is thread safe
-                nread = 0;
-            else
-                return -1;
-        }
-        else if(nread == 0)
-            return -2; //Socket broken
-
-        nleft -= nread;
-        ptr += nread;
-    }
-
-    return (n - nleft); 
-}
-
-
-//Terminates the process with the exit status specified by "err". 
-//Uses perror function to print a message describing the meaning of the value of errno.
-void error(char * msg,int err){
-    write(STDERR_FILENO,msg,strlen(msg)+1);
-    exit(err);
-}
-
 void sigintHandler(int code){
     serverKilled = true;
 } 
