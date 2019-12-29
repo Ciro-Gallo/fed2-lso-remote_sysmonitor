@@ -1,6 +1,5 @@
 
-#include "server.h"
-
+#include "server_utility.h"
 
 //GLOBAL VARIABLES
 node * sdContainer;
@@ -57,144 +56,76 @@ ssize_t readn(int fd, void * vptr, size_t n){
     return (n - nleft); 
 }
 
-void destroyBSTHostInfo(BSTHostInfo * bstInfo){
-    pthread_mutex_destroy(&bstInfo->mutex);
-    bstDestroy(bstInfo->root);
-
-    free(bstInfo);
-}
-
-BSTHostInfo * initBSTHostInfo(void){
-    BSTHostInfo * bstInfo = (BSTHostInfo *)malloc(sizeof(BSTHostInfo));
-    bstInfo->root = NULL;
-
-    pthread_mutex_init(&bstInfo->mutex,NULL);
-
-    return bstInfo;
-}
-
-//Takes a string and converts it to a number.
-long parseInt(char *arg) {
-  char *p = NULL;
-  long result = (long) strtol(arg, &p, 10);
-  if (p == NULL || *p != '\0') 
-    return -1; 
-  return result;
-} 
-
-//Takes a string representing an IP and converts it to a number.
-long parseIP(char * IP){
-    int len = strlen(IP);
-    char * newIP = (char *)malloc(sizeof(char)*(len-2)); //Length of IP minus 3 dots
-
-    int i=0;
-    int j=0;
-
-    //Copy IP without dots into newIP
-    while(i<len){
-        if(IP[i] != '.'){
-            newIP[j] = IP[i];
-            j++;
-        }
-
-        i++;
-    }
-    newIP[j]='\0';
-
-    long newIPInt = parseInt(newIP);
-
-    free(newIP);
-
-    return newIPInt;
-}
 
 //Terminates the process with the exit status specified by "err". 
 //Uses perror function to print a message describing the meaning of the value of errno.
 void error(char * msg,int err){
-    perror(msg);
+    write(STDERR_FILENO,msg,strlen(msg)+1);
     exit(err);
 }
 
-void sigpipeHandler(int code){
-    write(STDOUT_FILENO,"Ho catturato SIGPIPE!\n",23);
-}
-
-
 void sigintHandler(int code){
-    write(STDOUT_FILENO,"\nHo catturato SIGINT!\n",22);
     serverKilled = true;
-
 } 
-
 
 void * handleClient(void * arg){
     int socketClient = *(int *)arg;
+
     char * state;
+    char * hosts;
+    char read_buff[BUFFSIZE];
+    int nread;
+    long hostIP;
+    unsigned long buffInfo[3];
+    BSTNode * hostNode;
+    struct hostent * host;
+    bool threadKilled = false; //True if fatal error occurred in the thread and it must be killed.
 
     if(bstHostInfo->root == NULL)
         state = "There are no agents. Waiting for at least one registered host...\n\0";
     else
         state = "List of registered hosts. Pick one:\n\0";
 
-    int err;
-    if((err=write(socketClient,state,strlen(state)+1)) <= 0){
-        printf("Errore nella writen2!\n");
-        printf("STATE: %s - ERROR: %d - SOCKETCLIENT: %d\n", state, err, socketClient);
-        perror("Errore nella write: ");
+    if(write(socketClient,state,strlen(state)+1) <= 0){
+        threadKilled = true;
     }
 
-    //Wait till one agent connects or server is killed
-    while(bstHostInfo->root == NULL && !serverKilled){}
+    //Waits till one agent connects or server is killed
+    while(bstHostInfo->root == NULL && !serverKilled && !threadKilled){}
 
-    char read_buff[BUFFSIZE];
-    struct hostent * host;
-    int nread;
-    char * hosts;
-    long hostIP;
-    BSTNode * hostNode;
-    unsigned long buffInfo[3];
-
-    while(!serverKilled){
+    while(!serverKilled && !threadKilled){
         
         if(readn(socketClient,read_buff,6) < 0){
-            perror("Error reading\n");
             break;
         }
 
         pthread_mutex_lock(&bstHostInfo->mutex);
 
             hosts = bstGetHosts(bstHostInfo->root);
-            printf("List to send to client:\n %s\n", hosts);
         
         pthread_mutex_unlock(&bstHostInfo->mutex);
 
-        printf("I'm writing %s\n", hosts);
         //Send hosts list to client
         if(write(socketClient,hosts,strlen(hosts)) <= 0){
-            printf("Errore nella writen2!\n");
+            free(hosts);
+            break;
         }
         free(hosts);
 
         memset(read_buff,0,BUFFSIZE);
 
         //Read the choice from client
-        printf("Reading choice from client...\n");
         while((nread=read(socketClient,read_buff,BUFFSIZE)) < 0){
-            if(serverKilled){
-                perror("error reading\n");
+            if(serverKilled)
                 break;
-            }
         }
         if(serverKilled || nread==0)
             break;
 
-        read_buff[strlen(read_buff)] = '\0';
+        //read_buff[strlen(read_buff)] = '\0';
 
         host = gethostbyname(read_buff);
-        printf("IP host: %s\n", inet_ntoa(*(struct in_addr *)host->h_addr_list[0]));
-        
         hostIP = parseIP(inet_ntoa(*(struct in_addr *)host->h_addr_list[0]));
-
         hostNode = bstSearch(bstHostInfo->root,hostIP);
 
         //Clean buffer
@@ -209,10 +140,7 @@ void * handleClient(void * arg){
                 buffInfo[FREERAM] = hostNode->freeram;
                 buffInfo[PROCS] = hostNode->procs;
 
-                printf("SENT-> Uptime: %lu Freeram: %lu Procs: %lu\n", buffInfo[UPTIME], buffInfo[FREERAM], buffInfo[PROCS]);
-
                 if( writen(socketClient,buffInfo,sizeof(buffInfo)) < 0 ) {
-                    perror("Error writing\n");
                     break;
                 }
             }
@@ -220,10 +148,7 @@ void * handleClient(void * arg){
                 strcpy(read_buff,"disconnected\0");
                 write(socketClient,read_buff,strlen(read_buff)+1);  
 
-                printf("SENT-> %s\n", hostNode->time);
-
                 if( writen(socketClient,hostNode->time,strlen(hostNode->time)+1) < 0 ) {
-                    perror("Error writing\n");
                     break;
                 }
             }
@@ -247,25 +172,23 @@ void * handleClientStub(void * arg){
     int * sdClientLocal; 
     int acceptResult;
     struct timeval timer;
+
     timer.tv_sec=1;
     timer.tv_usec=0;
 
     //Set read calls non-blocking. If fails, kill server.
     if(setsockopt(sdClient,SOL_SOCKET,SO_RCVTIMEO,(const char *)&timer,sizeof(timer))<0){
-        printf("ERROR SETSOCKOPT\n");
-        perror("error\n");
         serverKilled = true;
     }
 
     while(!serverKilled){
-
+        //Accept is not blocking
         acceptResult = accept(sdClient,(struct sockaddr *)&client_addr,&size_client_addr);
 
         if(acceptResult != -1){
             sdClientLocal = (int *)malloc(sizeof(int));
             *sdClientLocal = acceptResult;
 
-            printf("Client has connected!\n");
             pthread_create(&tid,NULL,handleClient,sdClientLocal);
             
             listInsert(sdContainer,tid);
@@ -277,9 +200,15 @@ void * handleClientStub(void * arg){
 }
 
 void * handleAgent(void * arg){
+
     agentInfo * info = (agentInfo *)arg;
 
+    BSTNode * node;
+    BSTNode * nodeFound;
+
+    int ret; //To capture return value of readn() function
     int socketAgent = *(info->sd);
+
     bool inserted = false;
     time_t timer;
 
@@ -287,14 +216,12 @@ void * handleAgent(void * arg){
     char * lastTime;
     
     long localKey;
-    BSTNode * node;
-    BSTNode * nodeFound;
 
     unsigned long read_buffer[3];
 
     //Set localKey to agent's IP.
     localKey = parseIP(info->IP);
-    int ret;
+
 
     while(!serverKilled){
         //Get time
@@ -311,7 +238,6 @@ void * handleAgent(void * arg){
             nodeFound = bstSearch(bstHostInfo->root,localKey);
             if(strcmp(nodeFound->time,lastTime) == 0){
                 //Agent has not reconnected
-                printf("Agent set to disconnected!\n");
                 bstSetState(bstHostInfo->root,localKey,false);
             }
 
@@ -352,11 +278,7 @@ void * handleAgent(void * arg){
     }
 
     free(lastTime);
-    close(*(info->sd));
-    free(info->sd);
-    free(info->IP);
-    free(info->idhost);
-    free(info);
+    destroyAgentInfo(info);
 
     printf("Agent kill...\n");
     return NULL;
@@ -398,8 +320,6 @@ void * handleAgentStub(void * arg){
             //Get hostname or IP (if host not available)
             inAgentAddress = agent_addr.sin_addr;
 
-            printf("\nAgent IP before resolution: %s\n", inet_ntoa(agent_addr.sin_addr));
-
             clientInfo = gethostbyaddr(&inAgentAddress,sizeof(inAgentAddress),AF_INET);
 
             //Get agent's IP as string
@@ -411,10 +331,8 @@ void * handleAgentStub(void * arg){
                 strcpy(idAgent,clientInfo->h_name);
             }
             else{
-                //error("gethostfun",h_errno);
                 idAgent = (char *)malloc(sizeof(char)*(strlen(agentIP)+1));
                 strcpy(idAgent,agentIP);
-                printf("Resolution failed. IP: %s\n", idAgent);
             }
 
             //Prepare struct to pass to thread
@@ -431,40 +349,14 @@ void * handleAgentStub(void * arg){
     }
     
     printf("AgentStub kill...\n");
-    //pthread_exit(NULL);
-    return NULL;
-}
-
-//Takes a string representig a port in the range MIN_PORT MAX_PORT and returns it as integer.
-int parsePort(char * portToParse){
-    int port = parseInt(portToParse);
-
-    if(port<MIN_PORT || port>MAX_PORT){ //Fallita la conversione o porta non compresa nel range
-        printf("usage: ./program <port_agent> <port_client>. Insert valid port!\n");
-        exit(1);
-    }
-
-    return port;
-}
-
-
-bool isZeroThreadsCounter(int * counter,pthread_mutex_t * mutex){
-    pthread_mutex_lock(mutex);
-        if(*counter ==0){
-            pthread_mutex_unlock(mutex);
-            return true;
-        }
-        else{
-            pthread_mutex_unlock(mutex);
-            return false;
-        }
     
+    return NULL;
 }
 
 
 int main(int argc, char * argv[]){
 
-    //signal(SIGPIPE,sigpipeHandler);
+    signal(SIGPIPE,SIG_IGN);
     signal(SIGINT,sigintHandler);
 
     //Redirect stderr to stdout
@@ -472,7 +364,6 @@ int main(int argc, char * argv[]){
 
     if(argv[1]==NULL || argv[2]==NULL){
         printf("usage: %s <port_agent> <port_client>\n", argv[0]);
-        exit(1);
     }
     
     int port_agent = parsePort(argv[1]);
@@ -522,7 +413,7 @@ int main(int argc, char * argv[]){
 
     //Init struct containing mutex and bst root
     bstHostInfo = initBSTHostInfo();
-    //Create list that will contain socket descriptors and thread ids
+    //Create list that will contain thread ids
     sdContainer = listCreate();
 
     pthread_t tid_agent, tid_client;
@@ -557,7 +448,6 @@ int main(int argc, char * argv[]){
     }
 
     destroyBSTHostInfo(bstHostInfo);
-    printf("Destroying list...\n");
     listDestroy(sdContainer);
 
     return 0;
