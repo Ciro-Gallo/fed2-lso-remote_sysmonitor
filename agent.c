@@ -16,20 +16,17 @@ int main(int args, char** argv) {
     inet_aton(argv[2],&myaddress.sin_addr);
 
     if( (sd = socket(PF_INET,SOCK_STREAM,0)) < 0 ) {
-        perror("Error creating socket\n");
-        exit (-1);
+        error("Error creating socket\n",STDOUT_FILENO,ESOCK_CREATE);
     }
 
     if( connect(sd,(struct sockaddr*)&myaddress,sizeof(myaddress)) != 0 ) {
-        perror("Error during the connection\n");
-        exit (-1);
+        error("Error during connection\n",STDOUT_FILENO,ESOCK_CONN);
     }
     
 
     while(1) {
         if( sysinfo(&info) != 0 ) {
-            perror("Error fetching system informations\n");
-            exit (-1);
+            error("Error fetching system informations\n",STDOUT_FILENO,ESYS_INFO);
         } 
         buf[UPTIME] = info.uptime;
         buf[FREERAM] = info.freeram;
@@ -37,8 +34,7 @@ int main(int args, char** argv) {
         printf("uptime = %lu freeram = %lu procs = %lu\n",buf[UPTIME],buf[FREERAM],buf[PROCS]);
         
         if( writen(sd,buf,sizeof(buf)) < 0 ) {
-            perror("Error writing\n");
-            exit (-1);
+            error("Error writing host informations\n",STDOUT_FILENO,EWRITE);
         }
         sleep(3);
     }

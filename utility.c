@@ -1,5 +1,14 @@
 #include "utility.h"
 
+
+void error(char * msg, const int std, int err){
+    if(msg != NULL) {
+       write(std,msg,strlen(msg)+1);
+    }
+    exit(err);
+}
+
+
 ssize_t writen(int sd, const void* vptr, size_t n) {
     size_t nleft;
     ssize_t nwritten;
@@ -60,24 +69,16 @@ int argToInt(char* arg) {
 void checkArgs(int args, char** argv) {
     if(args != 3) {
         printf("usage: %s <port> <ipaddress>\n",argv[0]);
-        exit (-1);
+        error(NULL,STDOUT_FILENO,EARGS_NOTVALID);
     }
 
     int port = argToInt(argv[1]);
 
     if(port < MIN_PORT || port > MAX_PORT) {
-        printf("port overcome the range \n");
-        exit (-1);
+        error("port overcome the range\n",STDOUT_FILENO,EPORT_NOTVALID);
     }
 }
 
-
-void error(char * msg, const int std, int err){
-    if(msg != NULL) {
-       write(std,msg,strlen(msg)+1);
-    }
-    exit(err);
-}
 
 
 

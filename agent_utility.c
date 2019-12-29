@@ -12,6 +12,5 @@ void handleSigPipe(int s) {
     if( close(sd) < 0 ) {
         perror("Error closing socket\n");
     }
-    printf("Server disconnected\n");
-    exit (-1);
+    error("Server disconnected\n",STDOUT_FILENO,SIGPIPE);
 }

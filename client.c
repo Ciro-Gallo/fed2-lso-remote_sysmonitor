@@ -12,18 +12,15 @@ int main(int args, char** argv) {
     myaddress.sin_family = AF_INET;
     myaddress.sin_port = htons(port);
     if(inet_aton(argv[2],&myaddress.sin_addr) == 0) {
-        perror("Not valid IP address\n");
-        exit (-1);
+        error("Not valid IP address\n",STDOUT_FILENO,EIP_NOTVALID);
     }
 
     if( (sd = socket(PF_INET,SOCK_STREAM,0)) < 0 ) {
-        perror("Error creating socket\n");
-        exit (-1);
+        error("Error creating socket\n",STDOUT_FILENO,ESOCK_CREATE);
     }
 
     if( connect(sd,(struct sockaddr*)&myaddress,sizeof(myaddress)) != 0 ) {
-        perror("Error during the connection\n");
-        exit (-1);
+        error("Error during connection\n",STDOUT_FILENO,ESOCK_CONN);
     }
 
     printf("Connected\n\n");
@@ -33,8 +30,7 @@ int main(int args, char** argv) {
     unsigned long buffinfo[3];
 
     if( read(sd,read_buff,BUFFSIZE) <= 0 ) {
-        perror("error reading\n");
-        exit (-1);
+        error("Error reading intro message\n",STDOUT_FILENO,EREAD);
     }
     printf("%s\n",read_buff);
     memset(read_buff,0,BUFFSIZE);
@@ -64,6 +60,9 @@ int main(int args, char** argv) {
             break;
         }
 
+        printf("\n----------------------------\n");
+        printf("Requested infos about host %s\n\n",g_hostname);
+
         if(strcmp(read_buff,"connected") == 0) {
             //read the host informations
             if( readn(sd,buffinfo,sizeof(buffinfo)) < 0 ) {
@@ -72,7 +71,7 @@ int main(int args, char** argv) {
                 releaseResources(g_hosts,g_hostname);
                 break;
             } 
-            printf("uptime: %lu  freeram: %lu  procs: %lu\n",buffinfo[UPTIME],buffinfo[FREERAM],buffinfo[PROCS]);
+            printf("- uptime: %lu\n- freeram: %lu\n- procs: %lu\n",buffinfo[UPTIME],buffinfo[FREERAM],buffinfo[PROCS]);
         } else {
             //read last registered date
             memset(read_buff,0,BUFFSIZE);
@@ -85,6 +84,7 @@ int main(int args, char** argv) {
             printf("last date: %s",read_buff);
             memset(read_buff,0,BUFFSIZE);
         }
+         printf("----------------------------\n");
 
        releaseResources(g_hosts,g_hostname);
 

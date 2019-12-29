@@ -27,16 +27,8 @@
 #include "bst.h"
 #include "list.h"
 
-
-#define MIN_PORT 1024
-#define MAX_PORT 65535 
-
 #define MAX_CONN_NUMBER 5
 #define BUFFSIZE 4096
-
-#define UPTIME 0
-#define FREERAM 1
-#define PROCS 2
 
 typedef struct agentInfo{
     int * sd;

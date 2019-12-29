@@ -36,8 +36,9 @@ void getInt(int * elem, int b) {
 }
 
 void printHosts(char ** hosts) {
+    printf("\nUpdated hosts list:\n");
     for(int i = 0; i <  hostsnumber; ++i) {
-        printf("\n%d. %s\n",i,hosts[i]);
+        printf("\n  %d.  %s\n",i,hosts[i]);
     }
 }
 
@@ -119,8 +120,7 @@ void handleSigPipe(int s) {
     if(g_hostname != NULL)
         free(g_hostname);
 
-    printf("Server disconnected\n");
-    exit (-1);
+    error("Server disconnected\n",STDOUT_FILENO,SIGPIPE);
 }
 
 
@@ -129,17 +129,13 @@ char** printUpdatedList(int sockd, int * hnumber) {
     
     //synchronize client and server
     if( writen(sockd,"ready",6) < 0 ) {
-        perror("error writing (synchronization)\n");
-        printf("Server disconnected\n");
-        exit (-1);
+        error("error writing (synchronization)\nServer disconnected\n",STDOUT_FILENO,EWRITE);
     }
     memset(buff,0,BUFFSIZE); 
 
     //get the hosts list
     if( read(sockd,buff,BUFFSIZE) <= 0 ) {
-        perror("error reading (get hosts list)\n");
-        printf("Server disconnected\n");
-        exit (-1);
+        error("error reading (get hosts list)\nServer disconnected\n",STDOUT_FILENO,EREAD);
     }
 
     //index and print the hosts list
