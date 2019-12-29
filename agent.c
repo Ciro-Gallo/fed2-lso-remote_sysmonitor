@@ -1,4 +1,4 @@
-#include "agent.h"
+#include "agent_utility.h"
 
 int main(int args, char** argv) {
 
@@ -36,7 +36,7 @@ int main(int args, char** argv) {
         buf[PROCS] = info.procs;
         printf("uptime = %lu freeram = %lu procs = %lu\n",buf[UPTIME],buf[FREERAM],buf[PROCS]);
         
-        if( writen(sd,buf,sizeof(buf)) == -1 ) {
+        if( writen(sd,buf,sizeof(buf)) < 0 ) {
             perror("Error writing\n");
             exit (-1);
         }

@@ -1,4 +1,4 @@
-#include "client.h"
+#include "client_utility.h"
 
 int main(int args, char** argv) {
     
@@ -11,7 +11,10 @@ int main(int args, char** argv) {
 
     myaddress.sin_family = AF_INET;
     myaddress.sin_port = htons(port);
-    inet_aton(argv[2],&myaddress.sin_addr);
+    if(inet_aton(argv[2],&myaddress.sin_addr) == 0) {
+        perror("Not valid IP address\n");
+        exit (-1);
+    }
 
     if( (sd = socket(PF_INET,SOCK_STREAM,0)) < 0 ) {
         perror("Error creating socket\n");
@@ -23,13 +26,13 @@ int main(int args, char** argv) {
         exit (-1);
     }
 
-    printf("Connected\n");
+    printf("Connected\n\n");
 
     char read_buff[BUFFSIZE];
     char write_buff[BUFFSIZE];
     unsigned long buffinfo[3];
 
-    if( read(sd,read_buff,BUFFSIZE) < 0 ) {
+    if( read(sd,read_buff,BUFFSIZE) <= 0 ) {
         perror("error reading\n");
         exit (-1);
     }
@@ -38,6 +41,7 @@ int main(int args, char** argv) {
 
     int choice;
     while(1) {
+        //print the host list sent by the server and make an array of hosts
         g_hosts = printUpdatedList(sd,&hostsnumber);
 
         //choose the host and send his name to the server
@@ -48,39 +52,46 @@ int main(int args, char** argv) {
         strcpy(write_buff,g_hostname);
 
         if(writen(sd,write_buff,strlen(write_buff)+1) < 0) {
-            perror("error writing (send host name to the server)\n");
+            printf("error writing (send host name to the server)\n");
+            break;
         }
 
         //get the host state (connected or disconnected)
-        if( read(sd,read_buff,BUFFSIZE) < 0 ) {
-            perror("error reading (get host state)\n");
+        if( read(sd,read_buff,BUFFSIZE) <= 0 ) {
+            printf("error reading (get host state)\n");
+
+            releaseResources(g_hosts,g_hostname);
+            break;
         }
 
         if(strcmp(read_buff,"connected") == 0) {
             //read the host informations
-            if( readn(sd,buffinfo,sizeof(buffinfo)) == -2 ) {
-                perror("error reading (host informations)\n");
-            } else {
-                printf("uptime: %lu  freeram: %lu  procs: %lu\n",buffinfo[UPTIME],buffinfo[FREERAM],buffinfo[PROCS]);
-            }
+            if( readn(sd,buffinfo,sizeof(buffinfo)) < 0 ) {
+                printf("error reading (host informations)\n");
+
+                releaseResources(g_hosts,g_hostname);
+                break;
+            } 
+            printf("uptime: %lu  freeram: %lu  procs: %lu\n",buffinfo[UPTIME],buffinfo[FREERAM],buffinfo[PROCS]);
         } else {
             //read last registered date
             memset(read_buff,0,BUFFSIZE);
             if( read(sd,read_buff,BUFFSIZE) <= 0 ) {
-                perror("error reading (last registered date)\n");
-            } else {
-                printf("last date: %s",read_buff);
-            }
+                printf("error reading (last registered date)\n");
+                
+                releaseResources(g_hosts,g_hostname);
+                break;
+            } 
+            printf("last date: %s",read_buff);
             memset(read_buff,0,BUFFSIZE);
         }
 
-        destroyHosts(g_hosts);
-        free(g_hostname);
+       releaseResources(g_hosts,g_hostname);
 
         g_hosts = NULL;
         g_hostname = NULL;
     }
 
-    printf("Server disconnected\n");
+    printf("\nDisconnected from the server\n");
     return 0;
 }
