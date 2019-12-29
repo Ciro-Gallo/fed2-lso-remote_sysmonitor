@@ -332,27 +332,27 @@ int main(int argc, char * argv[]){
     sdAgent = socket(PF_INET,SOCK_STREAM | SOCK_NONBLOCK,0);
     
     if(sdAgent == -1)
-        error("Error creating the socket!\n",1);
+        error("Error creating the socket!\n",STDOUT_FILENO,1);
 
     if(bind(sdAgent,(struct sockaddr *)&server_addr,sizeof(server_addr)) == -1){
-        error("Error binding address!\n",1);
+        error("Error creating the socket!\n",STDOUT_FILENO,1);
     }
 
     if(listen(sdAgent,5) == -1){
-        error("Error in listening!\n",1);
+        error("Error creating the socket!\n",STDOUT_FILENO,1);
     }
 
     sdClient = socket(PF_INET,SOCK_STREAM | SOCK_NONBLOCK,0);
     
     if(sdClient == -1)
-        error("Error creating the socket!\n",1);
+        error("Error creating the socket!\n",STDOUT_FILENO,1);
 
     if(bind(sdClient,(struct sockaddr *)&server_addr_client,sizeof(server_addr_client)) == -1){
-        error("Error binding address!\n",1);
+        error("Error creating the socket!\n",STDOUT_FILENO,1);
     }
 
     if(listen(sdClient,MAX_CONN_NUMBER) == -1){
-        error("Error in listening!\n",1);
+        error("Error creating the socket!\n",STDOUT_FILENO,1);
     }
 
     //Init struct containing mutex and bst root
@@ -364,12 +364,12 @@ int main(int argc, char * argv[]){
 
     //Creating stub thread for agent
     if(pthread_create(&tid_agent,NULL,handleAgentStub,NULL) != 0){
-        error("Error creating stub thread for agent\n",-3);
+        error("Error creating the socket!\n",STDOUT_FILENO,1);
     }
 
     //Creating stub thread for client
     if(pthread_create(&tid_client,NULL,handleClientStub,NULL) != 0){
-        error("Error creating stub thread for client\n",-3);
+        error("Error creating the socket!\n",STDOUT_FILENO,1);
     }
 
     while(!serverKilled){}

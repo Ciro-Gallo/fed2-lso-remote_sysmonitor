@@ -36,4 +36,4 @@
     bool bstSetState(BSTNode * root,long key,bool state);
     char * bstGetHosts(BSTNode * root);
 
-#endif BST_H
+#endif
