@@ -32,8 +32,4 @@ BSTNode * bstInsert(BSTNode * root, BSTNode * data);
 void bstPrint(BSTNode * root);
 bool bstUpdate(BSTNode * root,BSTNode * data);
 bool bstSetState(BSTNode * root,long key,bool state);
-<<<<<<< HEAD
 char * bstGetHosts(BSTNode * root);
-=======
-char * bstGetHosts(BSTNode * root);
->>>>>>> 0e8d25cf88897c179231b89793270dd3dbffc902
