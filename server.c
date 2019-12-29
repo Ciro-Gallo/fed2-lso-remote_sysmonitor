@@ -174,21 +174,23 @@ void * handleAgent(void * arg){
 
         //Clean buffer
         memset(read_buffer,0,sizeof(read_buffer));
-
-        //If agent closes socket, then wait 6 seconds and check if it has reconnected.
-        if((ret=readn(socketAgent,read_buffer,sizeof(read_buffer))) == -2){
-            sleep(6);
-
-            nodeFound = bstSearch(bstHostInfo->root,localKey);
-            if(strcmp(nodeFound->time,lastTime) == 0){
-                //Agent has not reconnected
+        
+        //If agent closes socket or read remains blocked for more than 6 seconds check if it has reconnected.
+        if((ret=read(socketAgent,read_buffer,sizeof(read_buffer))) <= 0){
+            /* Durante la riconnessione lo considera ancora connected
+            if(errno == EAGAIN || errno == EWOULDBLOCK){
+                //Timeout
                 bstSetState(bstHostInfo->root,localKey,false);
+                break;
             }
-
-            break;
-        }
-        else if(ret == -1){
-            //Error on reading
+            else if(ret == 0){
+                nodeFound = bstSearch(bstHostInfo->root,localKey);
+                if(strcmp(nodeFound->time,lastTime) == 0){
+                    //Agent has not reconnected
+                    bstSetState(bstHostInfo->root,localKey,false);
+                }
+            }*/
+            bstSetState(bstHostInfo->root,localKey,false);
             break;
         }
 
@@ -249,6 +251,16 @@ void * handleAgentStub(void * arg){
     time_t timer;
     agentInfo * info;
 
+    struct timeval timer_sock;
+
+    timer_sock.tv_sec=6;
+    timer_sock.tv_usec=0;
+
+    //Set timeout of 6 seconds on read operations (from agents).
+    if(setsockopt(sdAgent,SOL_SOCKET,SO_RCVTIMEO,(const char *)&timer_sock,sizeof(timer_sock))<0){
+        serverKilled = true;
+    }
+    
     while(!serverKilled){
         
         acceptResult = accept(sdAgent,(struct sockaddr *)&agent_addr,&size_agent_addr);
@@ -256,7 +268,7 @@ void * handleAgentStub(void * arg){
         if(acceptResult != -1){
             socketAgent = (int *)malloc(sizeof(int));
             *socketAgent = acceptResult;
-
+            
             //Get time
             time(&timer);
             instant = ctime(&timer);
@@ -308,6 +320,7 @@ int main(int argc, char * argv[]){
 
     if(argc != NUM_ARGS){
         printf("usage: %s <port_agent> <port_client>\n", argv[0]);
+        exit(EARGS_NOTVALID);
     }
     
     int port_agent = parsePort(argv[1]);
