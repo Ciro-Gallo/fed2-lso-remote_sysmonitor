@@ -105,18 +105,18 @@ int main(int args, char** argv) {
         } else {
             //read last registered date
             memset(read_buff,0,BUFFSIZE);
-            if( read(sd,read_buff,BUFFSIZE) <= 0 ) {
+            if( read(sd,read_buff,TIMELENGTH) <= 0 ) {
                 printf("error reading (last registered date)\n");
                 
                 releaseResources(g_hosts,g_hostname,g_hnumber);
                 break;
             } 
             printf("last date: %s",read_buff);
-            memset(read_buff,0,BUFFSIZE);
+            memset(read_buff,0,TIMELENGTH);
         }
-         printf("----------------------------\n");
+        printf("----------------------------\n");
 
-       releaseResources(g_hosts,g_hostname,g_hnumber);
+        releaseResources(g_hosts,g_hostname,g_hnumber);
 
         g_hosts = NULL;
         g_hostname = NULL;

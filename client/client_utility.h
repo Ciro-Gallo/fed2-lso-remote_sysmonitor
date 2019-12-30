@@ -5,6 +5,7 @@
     #include <stdbool.h>
 
     #define BUFFSIZE 4096
+    #define TIMELENGTH 26
 
 
     int getHostsDim(char ** hosts);
