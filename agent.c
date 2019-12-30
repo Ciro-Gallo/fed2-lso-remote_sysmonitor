@@ -19,6 +19,7 @@ int main(int args, char** argv) {
         error("Error creating socket\n",STDOUT_FILENO,ESOCK_CREATE);
     }
 
+    printf("Waiting the server...\n");
     if( connect(sd,(struct sockaddr*)&myaddress,sizeof(myaddress)) != 0 ) {
         error("Error during connection\n",STDOUT_FILENO,ESOCK_CONN);
     }
