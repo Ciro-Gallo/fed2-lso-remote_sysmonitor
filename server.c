@@ -148,7 +148,6 @@ void * handleAgent(void * arg){
     agentInfo * info = (agentInfo *)arg;
 
     BSTNode * node;
-    BSTNode * nodeFound;
 
     int ret; //To capture return value of readn() function
     int socketAgent = *(info->sd);
