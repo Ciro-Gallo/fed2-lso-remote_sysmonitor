@@ -132,12 +132,12 @@ char** printUpdatedList(int sockd, int * hnumber) {
         error("error writing (synchronization)\nServer disconnected\n",STDOUT_FILENO,EWRITE);
     }
     memset(buff,0,BUFFSIZE); 
-
+    
     //get the hosts list
     if( read(sockd,buff,BUFFSIZE) <= 0 ) {
         error("error reading (get hosts list)\nServer disconnected\n",STDOUT_FILENO,EREAD);
     }
-
+    
     //index and print the hosts list
     char ** hosts = hostsToArray(buff,hnumber);
     printHosts(hosts);

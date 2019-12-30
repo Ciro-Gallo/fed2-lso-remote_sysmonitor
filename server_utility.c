@@ -65,9 +65,9 @@ long parseIP(char * IP){
 int parsePort(char * portToParse){
     int port = parseInt(portToParse);
 
-    if(port<MIN_PORT || port>MAX_PORT){ //Fallita la conversione o porta non compresa nel range
+    if(port<MIN_PORT || port>MAX_PORT){ //Conversion failed or port not in range
         printf("usage: ./program <port_agent> <port_client>. Insert valid port!\n");
-        exit(1);
+        error(NULL,STDERR_FILENO,EPORT_NOTVALID);
     }
 
     return port;

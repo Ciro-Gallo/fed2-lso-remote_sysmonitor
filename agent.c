@@ -24,6 +24,7 @@ int main(int args, char** argv) {
         error("Error during connection\n",STDOUT_FILENO,ESOCK_CONN);
     }
     
+    const double megabyte = 1024 * 1024;
 
     while(1) {
         if( sysinfo(&info) != 0 ) {
@@ -33,6 +34,9 @@ int main(int args, char** argv) {
         buf[FREERAM] = info.freeram;
         buf[PROCS] = info.procs;
         printf("uptime = %lu freeram = %lu procs = %lu\n",buf[UPTIME],buf[FREERAM],buf[PROCS]);
+
+        printf ("total RAM   : %5.1f MB\n", info.totalram / megabyte);
+        printf ("free RAM   : %5.1f MB  Perc: %2.1f\n", info.freeram / megabyte, ((info.freeram / megabyte)*100)/(info.totalram / megabyte));
         
         if( writen(sd,buf,sizeof(buf)) < 0 ) {
             error("Error writing host informations\n",STDOUT_FILENO,EWRITE);
