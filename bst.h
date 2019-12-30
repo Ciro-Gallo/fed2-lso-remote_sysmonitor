@@ -18,7 +18,7 @@
         char * time;
 
         unsigned long uptime;
-        unsigned long freeram;
+        float freeRamPercentage;
         unsigned long procs;
 
         BSTNode * dx;

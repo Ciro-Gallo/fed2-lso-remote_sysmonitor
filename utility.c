@@ -81,5 +81,10 @@ void checkArgs(int args, char** argv) {
 
 
 
+float ramToPercentage(unsigned long freeram, unsigned long totalram) {
+    const double megabytes = 1024 * 1024;
+    return ((freeram / megabytes)*100)/(totalram / megabytes);
+}
+
 
 

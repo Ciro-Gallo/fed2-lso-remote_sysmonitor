@@ -72,7 +72,8 @@ int main(int args, char** argv) {
                 releaseResources(g_hosts,g_hostname);
                 break;
             } 
-            printf("- uptime: %lu\n- freeram: %lu\n- procs: %lu\n",buffinfo[UPTIME],buffinfo[FREERAM],buffinfo[PROCS]);
+            
+            printf("- uptime: %lu\n- freeRamPercentage: %lu\n- procs: %lu\n",buffinfo[UPTIME],buffinfo[FREERAM],buffinfo[PROCS]);
         } else {
             //read last registered date
             memset(read_buff,0,BUFFSIZE);

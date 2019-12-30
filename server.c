@@ -81,7 +81,7 @@ void * handleClient(void * arg){
                 write(socketClient,read_buff,strlen(read_buff)+1);                
 
                 buffInfo[UPTIME] = hostNode->uptime;
-                buffInfo[FREERAM] = hostNode->freeram;
+                buffInfo[FREERAM] = hostNode->freeRamPercentage;
                 buffInfo[PROCS] = hostNode->procs;
 
                 if( writen(socketClient,buffInfo,sizeof(buffInfo)) < 0 ) {
@@ -148,7 +148,6 @@ void * handleAgent(void * arg){
     agentInfo * info = (agentInfo *)arg;
 
     BSTNode * node;
-    BSTNode * nodeFound;
 
     int ret; //To capture return value of readn() function
     int socketAgent = *(info->sd);

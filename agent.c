@@ -24,19 +24,19 @@ int main(int args, char** argv) {
         error("Error during connection\n",STDOUT_FILENO,ESOCK_CONN);
     }
     
-    const double megabyte = 1024 * 1024;
+    float freeRamPercentage;
+    const double megabytes = 1024 * 1024;
 
     while(1) {
         if( sysinfo(&info) != 0 ) {
             error("Error fetching system informations\n",STDOUT_FILENO,ESYS_INFO);
         } 
+        freeRamPercentage = ramToPercentage(info.freeram,info.totalram);
         buf[UPTIME] = info.uptime;
-        buf[FREERAM] = info.freeram;
+        buf[FREERAM] = freeRamPercentage;
         buf[PROCS] = info.procs;
-        printf("uptime = %lu freeram = %lu procs = %lu\n",buf[UPTIME],buf[FREERAM],buf[PROCS]);
-
-        printf ("total RAM   : %5.1f MB\n", info.totalram / megabyte);
-        printf ("free RAM   : %5.1f MB  Perc: %2.1f\n", info.freeram / megabyte, ((info.freeram / megabyte)*100)/(info.totalram / megabyte));
+        printf("uptime = %lu procs = %lu\n",buf[UPTIME],buf[PROCS]);
+        printf ("free RAM   : %5.1f MB  Perc: %2.1f\n", info.freeram / megabytes, freeRamPercentage);
         
         if( writen(sd,buf,sizeof(buf)) < 0 ) {
             error("Error writing host informations\n",STDOUT_FILENO,EWRITE);

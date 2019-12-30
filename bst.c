@@ -9,7 +9,7 @@ int strlen_custom(char * str){
     return 0;
 }
 
-BSTNode * newNode(long key,char * idhost,char * time,unsigned long uptime,unsigned long freeram,unsigned long procs){
+BSTNode * newNode(long key,char * idhost,char * time,unsigned long uptime,float freeRamPercentage,unsigned long procs){
     BSTNode * newNode = (BSTNode *)malloc(sizeof(BSTNode));
 
     newNode->key = key;
@@ -22,7 +22,7 @@ BSTNode * newNode(long key,char * idhost,char * time,unsigned long uptime,unsign
     strcpy(newNode->time,time);
 
     newNode->uptime = uptime;
-    newNode->freeram = freeram;
+    newNode->freeRamPercentage = freeRamPercentage;
     newNode->procs = procs;
 
     newNode->sx = NULL;
@@ -74,7 +74,7 @@ void bstPrint(BSTNode * root){
     if(root != NULL){
         bstPrint(root->sx);
         printf("Key: %ld\nHost: %s\nState: %d\nTime: %s\n", root->key, root->idhost, root->connected,root->time);
-        printf("Freeram: %lu\nUptime: %lu\nProcs: %lu\n\n", root->freeram, root->uptime, root->procs);
+        printf("freeRamPercentage: %lu\nUptime: %lu\nProcs: %lu\n\n", root->freeRamPercentage, root->uptime, root->procs);
         bstPrint(root->dx);
     }
 }
@@ -139,7 +139,7 @@ bool bstUpdate(BSTNode * root,BSTNode * data){
             strcpy(root->time,data->time);
 
             root->uptime = data->uptime;
-            root->freeram = data->freeram;
+            root->freeRamPercentage = data->freeRamPercentage;
             root->procs = data->procs;
 
             freeNode(data);
