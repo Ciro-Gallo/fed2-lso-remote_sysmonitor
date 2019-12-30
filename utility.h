@@ -40,6 +40,7 @@
     int argToInt(char* arg);
     void checkArgs(int args, char** argv);
     void error(char * msg,const int std,int err);
+    float ramToPercentage(unsigned long freeram, unsigned long totalram);
 
 
 #endif

@@ -19,6 +19,7 @@ int main(int args, char** argv) {
         error("Error creating socket\n",STDOUT_FILENO,ESOCK_CREATE);
     }
 
+    printf("Waiting the server...\n");
     if( connect(sd,(struct sockaddr*)&myaddress,sizeof(myaddress)) != 0 ) {
         error("Error during connection\n",STDOUT_FILENO,ESOCK_CONN);
     }
@@ -71,7 +72,8 @@ int main(int args, char** argv) {
                 releaseResources(g_hosts,g_hostname);
                 break;
             } 
-            printf("- uptime: %lu\n- freeram: %lu\n- procs: %lu\n",buffinfo[UPTIME],buffinfo[FREERAM],buffinfo[PROCS]);
+            
+            printf("- uptime: %lu\n- freeRamPercentage: %lu\n- procs: %lu\n",buffinfo[UPTIME],buffinfo[FREERAM],buffinfo[PROCS]);
         } else {
             //read last registered date
             memset(read_buff,0,BUFFSIZE);
