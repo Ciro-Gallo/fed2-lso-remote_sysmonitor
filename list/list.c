@@ -11,7 +11,7 @@ node * listCreate(){
     return head;
 }
 
-void listInsert(node * head, int tid){
+void listInsert(node * head, pthread_t tid){
 
     if(head->next != NULL){
         listInsert(head->next,tid);
@@ -36,7 +36,7 @@ void listDestroy(node * head){
 
 void listPrint(node * head){
     if(head != NULL){
-        printf("tid: %d ", head->tid);
+        printf("tid: %ld ", head->tid);
         listPrint(head->next);
     }
 }

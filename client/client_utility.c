@@ -8,8 +8,8 @@ int getHostsDim(char ** hosts) {
     return j;
 }
 
-void destroyHosts(char ** hosts) {
-    for(int i = 0; i < hostsnumber; ++i) {
+void destroyHosts(char ** hosts, int hnumber) {
+    for(int i = 0; i < hnumber; ++i) {
         free(hosts[i]);
     }
     free(hosts);
@@ -35,9 +35,9 @@ void getInt(int * elem, int b) {
     }
 }
 
-void printHosts(char ** hosts) {
+void printHosts(char ** hosts, int hnumber ) {
     printf("\nUpdated hosts list:\n");
-    for(int i = 0; i <  hostsnumber; ++i) {
+    for(int i = 0; i < hnumber; ++i) {
         printf("\n  %d.  %s\n",i,hosts[i]);
     }
 }
@@ -72,9 +72,9 @@ char** hostsToArray(char * buff, int * hnumber) {
         bytes++;
 
         if(buff[i] == '\n') {
-            arrayHost = (char**)realloc(arrayHost,sizeof(arrayHost) + (sizeof(char*)));
+            arrayHost = (char**)realloc(arrayHost,sizeof(arrayHost) + sizeof(char*));
             arrayHost[j] = (char*)malloc(sizeof(char)*bytes);
-            bytes = 0;
+            bytes = 0; 
             j++;
         }
         i++;
@@ -99,38 +99,13 @@ char** hostsToArray(char * buff, int * hnumber) {
 }
 
 
-
-void handleSigInt(int s) {
-    if( close(sd) < 0 ) {
-        perror("Error closing socket\n");
-    }
-    if(g_hosts != NULL)
-        destroyHosts(g_hosts);
-
-    exit (-1);
-}
-
-void handleSigPipe(int s) {
-    if( close(sd) < 0 ) {
-        perror("Error closing socket\n");
-    }
-    if(g_hosts != NULL)
-        destroyHosts(g_hosts);
-
-    if(g_hostname != NULL)
-        free(g_hostname);
-
-    error("Server disconnected\n",STDOUT_FILENO,SIGPIPE);
-}
-
-
-char** printUpdatedList(int sockd, int * hnumber) {
+char** printAndGetUpdatedList(int sockd, int * hnumber) {
     char buff[BUFFSIZE];
     
     //synchronize client and server
-    if( writen(sockd,"ready",6) < 0 ) {
+  /*  if( writen(sockd,"ready",6) < 0 ) {
         error("error writing (synchronization)\nServer disconnected\n",STDOUT_FILENO,EWRITE);
-    }
+    } */
     memset(buff,0,BUFFSIZE); 
     
     //get the hosts list
@@ -140,12 +115,12 @@ char** printUpdatedList(int sockd, int * hnumber) {
     
     //index and print the hosts list
     char ** hosts = hostsToArray(buff,hnumber);
-    printHosts(hosts);
+    printHosts(hosts,*hnumber);
 
     return hosts;
 }
 
-void releaseResources(char ** hosts, char * hostname) {
-    destroyHosts(g_hosts);
-    free(g_hostname);
+void releaseResources(char ** hosts, char * hostname, int hnumber) {
+    destroyHosts(hosts,hnumber);
+    free(hostname);
 }

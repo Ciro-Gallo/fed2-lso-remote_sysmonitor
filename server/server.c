@@ -38,19 +38,15 @@ void * handleClient(void * arg){
     while(bstHostInfo->root == NULL && !serverKilled && !threadKilled){}
 
     while(!serverKilled && !threadKilled){
-        
-        if(readn(socketClient,read_buff,6) < 0){
-            break;
-        }
-
         pthread_mutex_lock(&bstHostInfo->mutex);
 
             hosts = bstGetHosts(bstHostInfo->root);
         
         pthread_mutex_unlock(&bstHostInfo->mutex);
 
+        printf("LISTA: %s\n", hosts);
         //Send hosts list to client
-        if(write(socketClient,hosts,strlen(hosts)) <= 0){
+        if(write(socketClient,hosts,strlen(hosts)+1) <= 0){
             free(hosts);
             break;
         }
@@ -65,8 +61,6 @@ void * handleClient(void * arg){
         }
         if(serverKilled || nread==0)
             break;
-
-        //read_buff[strlen(read_buff)] = '\0';
 
         host = gethostbyname(read_buff);
         hostIP = parseIP(inet_ntoa(*(struct in_addr *)host->h_addr_list[0]));
@@ -173,8 +167,6 @@ void * handleAgent(void * arg){
             break;
         }
 
-        printf("FreeRAM Perc: %.1f\n", read_buffer[FREERAM]);
-
         pthread_mutex_lock(&bstHostInfo->mutex);
             
             node = newNode(localKey,info->idhost,currentTime,read_buffer[UPTIME],read_buffer[FREERAM],read_buffer[PROCS]);
@@ -201,6 +193,8 @@ void * handleAgent(void * arg){
             }
 
         pthread_mutex_unlock(&bstHostInfo->mutex);
+
+        printf("Dopo il mutex\n");
 
     }
 
@@ -387,6 +381,7 @@ int main(int argc, char * argv[]){
         root = root->next;
     }
 
+
     if(close(sdAgent)<0){
         write(STDERR_FILENO,"Error closing agent socket.\n",29);
     }
@@ -396,6 +391,7 @@ int main(int argc, char * argv[]){
 
     destroyBSTHostInfo(bstHostInfo);
     listDestroy(sdContainer);
+
 
     return 0;
 

@@ -9,14 +9,14 @@
 
     typedef struct node node;
     struct node {
-        int tid;
+        pthread_t tid;
 
         node * next;
     };
 
     node * listCreate();
 
-    void listInsert(node * head, int tid);
+    void listInsert(node * head, pthread_t tid);
     void listDestroy(node * head);
     void listPrint(node * head);
 #endif

@@ -1,24 +1,21 @@
 #ifndef CLIENT_UTILITY_H
     #define CLIENT_UTILITY_H
     
-    #include "utility.h"
+    #include "../utility/utility.h"
     #include <stdbool.h>
 
     #define BUFFSIZE 4096
 
-    int sd,hostsnumber;
-    char ** g_hosts;
-    char* g_hostname;
 
     int getHostsDim(char ** hosts);
-    void destroyHosts(char ** hosts);
+    void destroyHosts(char ** hosts, int hnumber);
     void getInt(int * elem, int b);
-    void printHosts(char ** hosts);
+    void printHosts(char ** hosts, int hnumber);
     char* getHostName(char * hostinfo);
     char** hostsToArray(char * buff, int * hnumber);
     void handleSigInt(int s);
     void handleSigPipe(int s);
-    char** printUpdatedList(int sockd, int * hnumber);
-    void releaseResources(char ** hosts, char * hostname);
+    char** printAndGetUpdatedList(int sockd, int * hnumber);
+    void releaseResources(char ** hosts, char * hostname, int hnumber);
 
 #endif

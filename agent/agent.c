@@ -1,4 +1,24 @@
-#include "agent_utility.h"
+#include "../utility/utility.h"
+#include <sys/sysinfo.h>
+#include <netdb.h>
+
+#define BUFFSIZE 3
+
+int sd;
+
+void handleSigInt(int s) {
+    if( close(sd) < 0 ) {
+        perror("Error closing socket\n");
+    }
+    exit (-1);
+}
+
+void handleSigPipe(int s) {
+    if( close(sd) < 0 ) {
+        perror("Error closing socket\n");
+    }
+    error("Server disconnected\n",STDOUT_FILENO,SIGPIPE);
+}
 
 int main(int args, char** argv) {
 
@@ -6,7 +26,7 @@ int main(int args, char** argv) {
     signal(SIGINT,handleSigInt);
     signal(SIGPIPE,handleSigPipe);
 
-    unsigned long buf[BUFFSIZE];
+    float buf[BUFFSIZE];
     struct sockaddr_in myaddress;
     struct sysinfo info;
     int port = argToInt(argv[1]);
@@ -35,7 +55,7 @@ int main(int args, char** argv) {
         buf[UPTIME] = info.uptime;
         buf[FREERAM] = freeRamPercentage;
         buf[PROCS] = info.procs;
-        printf("uptime = %lu procs = %lu\n",buf[UPTIME],buf[PROCS]);
+        printf("uptime = %.1f procs = %.1f\n",buf[UPTIME],buf[PROCS]);
         printf ("free RAM   : %5.1f MB  Perc: %2.1f\n", info.freeram / megabytes, freeRamPercentage);
         
         if( writen(sd,buf,sizeof(buf)) < 0 ) {
