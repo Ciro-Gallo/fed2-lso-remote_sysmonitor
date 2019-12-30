@@ -23,15 +23,16 @@
     #define ESOCK_BIND 6
     #define ESOCK_LISTEN 7
     #define ESOCK_CONN 8
+    #define ESOCK_OPT 9
 
-    #define ESYS_INFO 9
-    #define EWRITE 10
-    #define EREAD 11
-    #define EIP_NOTVALID 12
-    #define EARGS_NOTVALID 13
-    #define EPORT_NOTVALID 14
+    #define ESYS_INFO 10
+    #define EWRITE 11
+    #define EREAD 12
+    #define EIP_NOTVALID 13
+    #define EARGS_NOTVALID 14
+    #define EPORT_NOTVALID 15
 
-    #define ETHREAD_CREATE 15
+    #define ETHREAD_CREATE 16
     
     
     ssize_t writen(int sd, const void* vptr, size_t n);

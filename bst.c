@@ -74,7 +74,7 @@ void bstPrint(BSTNode * root){
     if(root != NULL){
         bstPrint(root->sx);
         printf("Key: %ld\nHost: %s\nState: %d\nTime: %s\n", root->key, root->idhost, root->connected,root->time);
-        printf("freeRamPercentage: %lu\nUptime: %lu\nProcs: %lu\n\n", root->freeRamPercentage, root->uptime, root->procs);
+        printf("freeRamPercentage: %.2f\nUptime: %lu\nProcs: %lu\n\n", root->freeRamPercentage, root->uptime, root->procs);
         bstPrint(root->dx);
     }
 }

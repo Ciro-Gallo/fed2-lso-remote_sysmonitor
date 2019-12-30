@@ -26,7 +26,7 @@
     };
 
 
-    BSTNode * newNode(long key,char * idhost,char * time,unsigned long uptime,unsigned long freeram,unsigned long procs);
+    BSTNode * newNode(long key,char * idhost,char * time,unsigned long uptime,float freeRamPercentage,unsigned long procs);
     void bstDestroy(BSTNode * root);
 
     BSTNode * bstSearch(BSTNode * root, long key);

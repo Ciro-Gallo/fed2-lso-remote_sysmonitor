@@ -8,7 +8,7 @@ int sdClient;
 bool serverKilled = false;
 BSTHostInfo * bstHostInfo;
 
-void sigintHandler(int code){
+void handleSigInt(int code){
     serverKilled = true;
 } 
 
@@ -20,7 +20,7 @@ void * handleClient(void * arg){
     char read_buff[BUFFSIZE];
     int nread;
     long hostIP;
-    unsigned long buffInfo[3];
+    float buffInfo[3];
     BSTNode * hostNode;
     struct hostent * host;
     bool threadKilled = false; //True if fatal error occurred in the thread and it must be killed.
@@ -115,15 +115,6 @@ void * handleClientStub(void * arg){
     pthread_t tid;
     int * sdClientLocal; 
     int acceptResult;
-    struct timeval timer;
-
-    timer.tv_sec=1;
-    timer.tv_usec=0;
-
-    //Set read calls non-blocking. If fails, kill server.
-    if(setsockopt(sdClient,SOL_SOCKET,SO_RCVTIMEO,(const char *)&timer,sizeof(timer))<0){
-        serverKilled = true;
-    }
 
     while(!serverKilled){
         //Accept is not blocking
@@ -149,7 +140,6 @@ void * handleAgent(void * arg){
 
     BSTNode * node;
 
-    int ret; //To capture return value of readn() function
     int socketAgent = *(info->sd);
 
     bool inserted = false;
@@ -160,7 +150,7 @@ void * handleAgent(void * arg){
     
     long localKey;
 
-    unsigned long read_buffer[3];
+    float read_buffer[3];
 
     //Set localKey to agent's IP.
     localKey = parseIP(info->IP);
@@ -175,10 +165,15 @@ void * handleAgent(void * arg){
         memset(read_buffer,0,sizeof(read_buffer));
         
         //If agent closes socket or read remains blocked for more than 6 seconds check if it has reconnected.
-        if((ret=read(socketAgent,read_buffer,sizeof(read_buffer))) <= 0){
-            bstSetState(bstHostInfo->root,localKey,false);
+        if(read(socketAgent,read_buffer,sizeof(read_buffer)) <= 0){
+            pthread_mutex_lock(&bstHostInfo->mutex);
+                bstSetState(bstHostInfo->root,localKey,false);
+            pthread_mutex_unlock(&bstHostInfo->mutex);
+
             break;
         }
+
+        printf("FreeRAM Perc: %.1f\n", read_buffer[FREERAM]);
 
         pthread_mutex_lock(&bstHostInfo->mutex);
             
@@ -237,15 +232,6 @@ void * handleAgentStub(void * arg){
     time_t timer;
     agentInfo * info;
 
-    struct timeval timer_sock;
-
-    timer_sock.tv_sec=6;
-    timer_sock.tv_usec=0;
-
-    //Set timeout of 6 seconds on read operations (from agents).
-    if(setsockopt(sdAgent,SOL_SOCKET,SO_RCVTIMEO,(const char *)&timer_sock,sizeof(timer_sock))<0){
-        serverKilled = true;
-    }
     
     while(!serverKilled){
         
@@ -299,7 +285,7 @@ void * handleAgentStub(void * arg){
 int main(int argc, char * argv[]){
 
     signal(SIGPIPE,SIG_IGN);
-    signal(SIGINT,sigintHandler);
+    signal(SIGINT,handleSigInt);
 
     //Redirect stderr to stdout
     dup2(STDOUT_FILENO,STDERR_FILENO);
@@ -314,12 +300,12 @@ int main(int argc, char * argv[]){
     printf("\nServer listening on ports %d (agents), %d (clients)...\n\n", port_agent, port_client);
 
     //Declaring variables
-    struct sockaddr_in server_addr;
+    struct sockaddr_in server_addr_agent;
     struct sockaddr_in server_addr_client;
 
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(port_agent);
-    server_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    server_addr_agent.sin_family = AF_INET;
+    server_addr_agent.sin_port = htons(port_agent);
+    server_addr_agent.sin_addr.s_addr = htonl(INADDR_ANY);
 
     server_addr_client.sin_family = AF_INET;
     server_addr_client.sin_port = htons(port_client);
@@ -331,7 +317,7 @@ int main(int argc, char * argv[]){
     if(sdAgent == -1)
         error("Error creating agent socket\n",STDERR_FILENO,ESOCK_CREATE);
 
-    if(bind(sdAgent,(struct sockaddr *)&server_addr,sizeof(server_addr)) == -1){
+    if(bind(sdAgent,(struct sockaddr *)&server_addr_agent,sizeof(server_addr_agent)) == -1){
         error("Error binding agent socket\n",STDERR_FILENO,ESOCK_BIND);
     }
 
@@ -339,6 +325,17 @@ int main(int argc, char * argv[]){
         error("Error preparing agent socket to accept connections\n",STDERR_FILENO,ESOCK_LISTEN);
     }
 
+    struct timeval timer_agent;
+
+    timer_agent.tv_sec=6;
+    timer_agent.tv_usec=0;
+
+    //Set timeout of 6 seconds on read calls.
+    if(setsockopt(sdAgent,SOL_SOCKET,SO_RCVTIMEO,(const char *)&timer_agent,sizeof(timer_agent))<0){
+        error("Error setting agent socket options\n",STDERR_FILENO,ESOCK_OPT);
+    }
+
+    //Creates non blocking socket to avoid it blocking in accept()
     sdClient = socket(PF_INET,SOCK_STREAM | SOCK_NONBLOCK,0);
     
     if(sdClient == -1)
@@ -350,6 +347,16 @@ int main(int argc, char * argv[]){
 
     if(listen(sdClient,MAX_CONN_NUMBER) == -1){
         error("Error preparing client socket to accept connections\n",STDERR_FILENO,ESOCK_LISTEN);
+    }
+
+    struct timeval timer_client;
+
+    timer_client.tv_sec=1;
+    timer_client.tv_usec=0;
+
+    //Set read calls non-blocking. If fails, kill server.
+    if(setsockopt(sdClient,SOL_SOCKET,SO_RCVTIMEO,(const char *)&timer_client,sizeof(timer_client))<0){
+        error("Error setting client socket options\n",STDERR_FILENO,ESOCK_OPT);
     }
 
     //Init struct containing mutex and bst root
