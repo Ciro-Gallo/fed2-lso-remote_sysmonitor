@@ -2,15 +2,36 @@
 #include "server_utility.h"
 
 //GLOBAL VARIABLES
-node * sdContainer;
 int sdAgent;
 int sdClient;
-bool serverKilled = false;
+
 BSTHostInfo * bstHostInfo;
+node * sdContainer;
+
+bool serverKilled = false;
 
 void handleSigInt(int code){
     serverKilled = true;
-} 
+}
+
+void killServer(void){
+    node * root = sdContainer->next;
+    while(root != NULL){
+        pthread_join(root->tid,NULL);
+        root = root->next;
+    }
+
+
+    if(close(sdAgent)<0){
+        write(STDERR_FILENO,"Error closing agent socket.\n",29);
+    }
+    if(close(sdClient)<0){
+        write(STDERR_FILENO,"Error closing client socket.\n",30);
+    }
+
+    destroyBSTHostInfo(bstHostInfo);
+    listDestroy(sdContainer);
+}
 
 void * handleClient(void * arg){
     int socketClient = *(int *)arg;
@@ -332,14 +353,14 @@ int main(int argc, char * argv[]){
     //Creates non blocking socket to avoid it blocking in accept()
     sdClient = socket(PF_INET,SOCK_STREAM | SOCK_NONBLOCK,0);
     
-    if(sdClient == -1)
+    if(sdClient < 0)
         error("Error creating client socket\n",STDERR_FILENO,ESOCK_CREATE);
 
-    if(bind(sdClient,(struct sockaddr *)&server_addr_client,sizeof(server_addr_client)) == -1){
+    if(bind(sdClient,(struct sockaddr *)&server_addr_client,sizeof(server_addr_client)) < 0){
         error("Error binding client socket\n",STDERR_FILENO,ESOCK_BIND);
     }
 
-    if(listen(sdClient,MAX_CONN_NUMBER) == -1){
+    if(listen(sdClient,MAX_CONN_NUMBER) < 0){
         error("Error preparing client socket to accept connections\n",STDERR_FILENO,ESOCK_LISTEN);
     }
 
@@ -349,13 +370,13 @@ int main(int argc, char * argv[]){
     timer_client.tv_usec=0;
 
     //Set read calls non-blocking. If fails, kill server.
-    if(setsockopt(sdClient,SOL_SOCKET,SO_RCVTIMEO,(const char *)&timer_client,sizeof(timer_client))<0){
+    if(setsockopt(sdClient,SOL_SOCKET,SO_RCVTIMEO,(const char *)&timer_client,sizeof(timer_client)) < 0){
         error("Error setting client socket options\n",STDERR_FILENO,ESOCK_OPT);
     }
 
     //Init struct containing mutex and bst root
     bstHostInfo = initBSTHostInfo();
-    //Create list that will contain thread ids
+    //Create list that will contain ids of threads created by stubs
     sdContainer = listCreate();
 
     pthread_t tid_agent, tid_client;
@@ -375,23 +396,7 @@ int main(int argc, char * argv[]){
     pthread_join(tid_agent,NULL);
     pthread_join(tid_client,NULL);
 
-    node * root = sdContainer->next;
-    while(root != NULL){
-        pthread_join(root->tid,NULL);
-        root = root->next;
-    }
-
-
-    if(close(sdAgent)<0){
-        write(STDERR_FILENO,"Error closing agent socket.\n",29);
-    }
-    if(close(sdClient)<0){
-        write(STDERR_FILENO,"Error closing client socket.\n",30);
-    }
-
-    destroyBSTHostInfo(bstHostInfo);
-    listDestroy(sdContainer);
-
+    killServer();
 
     return 0;
 
