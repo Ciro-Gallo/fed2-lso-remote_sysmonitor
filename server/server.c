@@ -21,7 +21,6 @@ void killServer(void){
         root = root->next;
     }
 
-
     if(close(sdAgent)<0){
         write(STDERR_FILENO,"Error closing agent socket.\n",29);
     }

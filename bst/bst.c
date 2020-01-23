@@ -2,13 +2,6 @@
 #include "bst.h"
 
 
-//Should go into utility.c
-int strlen_custom(char * str){
-    if(str != NULL)
-        return strlen(str);
-    return 0;
-}
-
 BSTNode * newNode(long key,char * idhost,char * time,unsigned long uptime,float freeRamPercentage,unsigned long procs){
     BSTNode * newNode = (BSTNode *)malloc(sizeof(BSTNode));
 

@@ -8,6 +8,11 @@ void error(char * msg, const int std, int err){
     exit(err);
 }
 
+int strlen_custom(char * str){
+    if(str != NULL)
+        return strlen(str);
+    return 0;
+}
 
 ssize_t writen(int sd, const void* vptr, size_t n) {
     size_t nleft;

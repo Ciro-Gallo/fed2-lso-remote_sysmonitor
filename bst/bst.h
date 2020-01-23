@@ -1,10 +1,9 @@
 #ifndef BST_H
     #define BST_H
 
-    #include <stdio.h>
+    #include "../utility/utility.h"
+    
     #include <stdbool.h>
-    #include <stdlib.h>
-    #include <string.h>
 
     #define DIM_STATE 13 //Length of string "disconnected"
 

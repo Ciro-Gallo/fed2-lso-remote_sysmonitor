@@ -34,13 +34,16 @@
 
     #define ETHREAD_CREATE 16
     
-    
+
     ssize_t writen(int sd, const void* vptr, size_t n);
     ssize_t readn(int sd, void* vptr, size_t n);
     
+    int strlen_custom(char * str);
     int argToInt(char* arg);
+
     void checkArgs(int args, char** argv);
     void error(char * msg,const int std,int err);
+    
     float ramToPercentage(unsigned long freeram, unsigned long totalram);
 
 
