@@ -303,9 +303,6 @@ int main(int argc, char * argv[]){
         error("Error setting handler for SIG_INT",STDERR_FILENO,ESIGNAL);
     }
 
-    //Redirect stderr to stdout
-    dup2(STDOUT_FILENO,STDERR_FILENO);
-
     if(argc != NUM_ARGS){
         error("usage: ./cmd <port_agent> <port_client>\n",STDERR_FILENO,EARGS_NOTVALID);
     }
