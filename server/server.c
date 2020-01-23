@@ -214,8 +214,6 @@ void * handleAgent(void * arg){
 
         pthread_mutex_unlock(&bstHostInfo->mutex);
 
-        printf("Dopo il mutex\n");
-
     }
 
     free(lastTime);
@@ -298,8 +296,12 @@ void * handleAgentStub(void * arg){
 
 int main(int argc, char * argv[]){
 
-    signal(SIGPIPE,SIG_IGN);
-    signal(SIGINT,handleSigInt);
+    if(signal(SIGPIPE,SIG_IGN) == SIG_ERR){
+        error("Error setting handler for SIG_PIPE",STDERR_FILENO,ESIGNAL);
+    }
+    if(signal(SIGINT,handleSigInt) == SIG_ERR){
+        error("Error setting handler for SIG_INT",STDERR_FILENO,ESIGNAL);
+    }
 
     //Redirect stderr to stdout
     dup2(STDOUT_FILENO,STDERR_FILENO);

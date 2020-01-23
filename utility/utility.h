@@ -33,6 +33,7 @@
     #define EPORT_NOTVALID 15
 
     #define ETHREAD_CREATE 16
+    #define ESIGNAL 17
     
 
     ssize_t writen(int sd, const void* vptr, size_t n);
@@ -43,7 +44,7 @@
 
     void checkArgs(int args, char** argv);
     void error(char * msg,const int std,int err);
-    
+
     float ramToPercentage(unsigned long freeram, unsigned long totalram);
 
 
