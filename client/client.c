@@ -31,8 +31,12 @@ void handleSigPipe(int s) {
 int main(int args, char** argv) {
     
     checkArgs(args,argv);
-    signal(SIGINT,handleSigInt);
-    signal(SIGPIPE,handleSigPipe);
+    if(signal(SIGINT,handleSigInt) == SIG_ERR) {
+        error("Error setting handler\n",STDOUT_FILENO,ESIGNAL);
+    }
+    if(signal(SIGPIPE,handleSigPipe) == SIG_ERR) {
+        error("Error setting handler\n",STDOUT_FILENO,ESIGNAL);
+    }
 
     struct sockaddr_in myaddress;
     int port = argToInt(argv[1]);
@@ -54,15 +58,15 @@ int main(int args, char** argv) {
 
     printf("Connected\n\n");
 
-    char read_buff[BUFFSIZE];
-    char write_buff[BUFFSIZE];
+    char read_buff[BUFFSIZE] = "";
+    char write_buff[BUFFSIZE] = "";
     float buffinfo[3];
 
     if( read(sd,read_buff,BUFFSIZE) <= 0 ) {
         error("Error reading intro message\n",STDOUT_FILENO,EREAD);
     }
     printf("%s\n",read_buff);
-    memset(read_buff,0,BUFFSIZE);
+    //memset(read_buff,0,BUFFSIZE);
 
     int choice;
     while(1) {
@@ -105,6 +109,8 @@ int main(int args, char** argv) {
         } else {
             //read last registered date
             memset(read_buff,0,BUFFSIZE);
+            //read TIMELENGTH bytes in order to take only the date and not 
+            //also the list
             if( read(sd,read_buff,TIMELENGTH) <= 0 ) {
                 printf("error reading (last registered date)\n");
                 

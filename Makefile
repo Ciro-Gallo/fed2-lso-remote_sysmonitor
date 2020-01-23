@@ -42,4 +42,4 @@ utility.o: utility/utility.c utility/utility.h
 	$(CC) $(CFLAGS) utility/utility.c
 
 clean: 
-	rm *.o run_server run_client run_agent
+	rm -f *.o run_server run_client run_agent

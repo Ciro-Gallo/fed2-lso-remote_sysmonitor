@@ -24,8 +24,12 @@ void handleSigPipe(int s) {
 int main(int args, char** argv) {
 
     checkArgs(args,argv);
-    signal(SIGINT,handleSigInt);
-    signal(SIGPIPE,handleSigPipe);
+    if(signal(SIGINT,handleSigInt) == SIG_ERR) {
+        error("Error setting handler\n",STDOUT_FILENO,ESIGNAL);
+    }
+    if(signal(SIGPIPE,handleSigPipe) == SIG_ERR) {
+        error("Error setting handler\n",STDOUT_FILENO,ESIGNAL);
+    }
 
     float buf[BUFFSIZE];
     struct sockaddr_in myaddress;

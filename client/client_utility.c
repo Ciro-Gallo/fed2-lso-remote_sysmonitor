@@ -100,13 +100,7 @@ char** hostsToArray(char * buff, int * hnumber) {
 
 
 char** printAndGetUpdatedList(int sockd, int * hnumber) {
-    char buff[BUFFSIZE];
-    
-    //synchronize client and server
-  /*  if( writen(sockd,"ready",6) < 0 ) {
-        error("error writing (synchronization)\nServer disconnected\n",STDOUT_FILENO,EWRITE);
-    } */
-    memset(buff,0,BUFFSIZE); 
+    char buff[BUFFSIZE] = ""; 
     
     //get the hosts list
     if( read(sockd,buff,BUFFSIZE) <= 0 ) {
@@ -116,7 +110,6 @@ char** printAndGetUpdatedList(int sockd, int * hnumber) {
     //index and print the hosts list
     char ** hosts = hostsToArray(buff,hnumber);
     printHosts(hosts,*hnumber);
-   // memset(buff,0,BUFFSIZE);
 
     return hosts;
 }
