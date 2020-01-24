@@ -24,7 +24,8 @@ client_utility.o: client/client_utility.c client/client_utility.h
 	$(CC) $(CFLAGS) client/client_utility.c
 
 server: server.o server_utility.o bst.o list.o utility.o
-	$(CC) -pthread -o run_server server.o server_utility.o bst.o list.o utility.o
+	$(CC) -pthread -o run_server server.o server_utili
+	ty.o bst.o list.o utility.o
 
 server.o: server/server.c 
 	$(CC) $(CFLAGS) server/server.c 
