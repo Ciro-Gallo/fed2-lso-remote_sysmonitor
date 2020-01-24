@@ -1,45 +1,93 @@
 
+#The following modularization was designed with the aim of facilitating all future changes.
+
 #VARIABLES
 
 CC = gcc
 CFLAGS = -g -Wall -c
+PTHREAD_FLAGS = -pthread
+
+FLD_AGENT = agent
+BIN_AGENT = agent
+OBJ_AGENT = agent.o 
+SRC_AGENT = $(FLD_AGENT)/agent.c 
+
+FLD_CLIENT = client
+BIN_CLIENT = client
+OBJ_CLIENT = client.o 
+OBJ_CLIENT_UTILITY = client_utility.o
+SRC_CLIENT = $(FLD_CLIENT)/client.c 
+SRC_CLIENT_UTILITY = $(FLD_CLIENT)/client_utility.c 
+
+FLD_SERVER = server
+BIN_SERVER = server
+OBJ_SERVER = server.o 
+OBJ_SERVER_UTILITY = server_utility.o
+SRC_SERVER = $(FLD_SERVER)/server.c
+SRC_SERVER_UTILITY = $(FLD_SERVER)/server_utility.c
+
+OBJ_BST = bst.o 
+SRC_BST = bst/bst.c
+
+OBJ_LIST = list.o 
+SRC_LIST = list/list.c 
+
+OBJ_UTILITY = utility.o
+SRC_UTILITY = utility/utility.c
+
 
 #TARGETS DEFINITION
 
-all: server client agent
+all: $(BIN_SERVER) $(BIN_CLIENT) $(BIN_AGENT)
 
-agent: agent.o utility.o 
-	$(CC) -o run_agent agent.o utility.o 
+$(BIN_AGENT): $(OBJ_AGENT) $(OBJ_UTILITY) 
+	$(CC) -o run_agent $^
+	@echo Agent compiled.
+	@echo ""
 
-agent.o: agent/agent.c
-	$(CC) $(CFLAGS) agent/agent.c
+$(OBJ_AGENT): $(SRC_AGENT)
+	$(CC) $(CFLAGS) $(SRC_AGENT)
 
-client: client.o client_utility.o utility.o
-	$(CC) -o run_client client.o client_utility.o utility.o
+$(BIN_CLIENT): $(OBJ_CLIENT) $(OBJ_CLIENT_UTILITY) $(OBJ_UTILITY)
+	$(CC) -o run_client $^
+	@echo Client compiled.
+	@echo ""
 
-client.o: client/client.c 
-	$(CC) $(CFLAGS) client/client.c
+$(OBJ_CLIENT): $(SRC_CLIENT)
+	$(CC) $(CFLAGS) $^
 
-client_utility.o: client/client_utility.c client/client_utility.h
-	$(CC) $(CFLAGS) client/client_utility.c
+$(OBJ_CLIENT_UTILITY): $(SRC_CLIENT_UTILITY) 
+	$(CC) $(CFLAGS) $^
 
-server: server.o server_utility.o bst.o list.o utility.o
-	$(CC) -pthread -o run_server server.o server_utility.o bst.o list.o utility.o
+$(BIN_SERVER): $(OBJ_SERVER) $(OBJ_SERVER_UTILITY) $(OBJ_BST) $(OBJ_LIST) $(OBJ_UTILITY)
+	$(CC) $(PTHREAD_FLAGS) -o run_server $^
+	@echo Server compiled.
+	@echo ""
 
-server.o: server/server.c 
-	$(CC) $(CFLAGS) server/server.c 
+$(OBJ_SERVER): $(SRC_SERVER)
+	$(CC) $(CFLAGS) $^
 
-server_utility.o: server/server_utility.c server/server_utility.h
-	$(CC) $(CFLAGS) server/server_utility.c 
+$(OBJ_SERVER_UTILITY): $(SRC_SERVER_UTILITY) 
+	$(CC) $(CFLAGS) $^
 
-bst.o: bst/bst.c bst/bst.h
-	$(CC) $(CFLAGS) bst/bst.c 
+$(OBJ_BST): $(SRC_BST) 
+	$(CC) $(CFLAGS) $^ 
 
-list.o: list/list.c list/list.h
-	$(CC) $(CFLAGS) list/list.c list/list.h
+$(OBJ_LIST): $(SRC_LIST) 
+	$(CC) $(CFLAGS) $^
 
-utility.o: utility/utility.c utility/utility.h
-	$(CC) $(CFLAGS) utility/utility.c
+$(OBJ_UTILITY): $(SRC_UTILITY) 
+	$(CC) $(CFLAGS) $^
 
-clean: 
-	rm -f *.o run_server run_client run_agent
+
+#DEEP CLEAN
+
+clean: cleanObj cleanBin
+
+cleanObj: 
+	@echo Cleaning object files:
+	rm -f *.o 
+
+cleanBin:
+	@echo Cleaning binary files:
+	rm -f run_server run_client run_agent
