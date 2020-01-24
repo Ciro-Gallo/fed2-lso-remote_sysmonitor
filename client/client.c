@@ -66,7 +66,6 @@ int main(int args, char** argv) {
         error("Error reading intro message\n",STDOUT_FILENO,EREAD);
     }
     printf("%s\n",read_buff);
-    //memset(read_buff,0,BUFFSIZE);
 
     int choice;
     while(1) {

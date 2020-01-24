@@ -1,13 +1,5 @@
 #include "client_utility.h"
 
-int getHostsDim(char ** hosts) {
-    int j = 0;
-    while(hosts[j] != NULL) 
-        j++;
-
-    return j;
-}
-
 void destroyHosts(char ** hosts, int hnumber) {
     for(int i = 0; i < hnumber; ++i) {
         free(hosts[i]);
