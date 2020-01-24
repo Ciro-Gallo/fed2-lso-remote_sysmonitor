@@ -64,7 +64,6 @@ void * handleClient(void * arg){
         
         pthread_mutex_unlock(&bstHostInfo->mutex);
 
-        printf("LISTA: %s\n", hosts);
         //Send hosts list to client
         if(write(socketClient,hosts,strlen(hosts)+1) <= 0){
             free(hosts);
@@ -113,7 +112,6 @@ void * handleClient(void * arg){
         }
     }
 
-    printf("Client kill...\n");
     free((int *)arg);
     close(socketClient);
 
@@ -144,7 +142,6 @@ void * handleClientStub(void * arg){
         }
     }
 
-    printf("ClientStub kill...\n");
     return NULL;
 }
 
@@ -153,7 +150,6 @@ void * handleAgent(void * arg){
     agentInfo * info = (agentInfo *)arg;
 
     BSTNode * node;
-
     int socketAgent = *(info->sd);
 
     bool inserted = false;
@@ -213,13 +209,11 @@ void * handleAgent(void * arg){
             }
 
         pthread_mutex_unlock(&bstHostInfo->mutex);
-
     }
 
     free(lastTime);
     destroyAgentInfo(info);
 
-    printf("Agent kill...\n");
     return NULL;
 }
 
@@ -288,8 +282,6 @@ void * handleAgentStub(void * arg){
         }
     }
     
-    printf("AgentStub kill...\n");
-    
     return NULL;
 }
 
@@ -309,8 +301,6 @@ int main(int argc, char * argv[]){
     
     int port_agent = parsePort(argv[1]);
     int port_client = parsePort(argv[2]);
-
-    printf("\nServer listening on ports %d (agents), %d (clients)...\n\n", port_agent, port_client);
 
     //Declaring variables
     struct sockaddr_in server_addr_agent;
