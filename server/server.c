@@ -150,7 +150,6 @@ void * handleAgent(void * arg){
     agentInfo * info = (agentInfo *)arg;
 
     BSTNode * node;
-
     int socketAgent = *(info->sd);
 
     bool inserted = false;

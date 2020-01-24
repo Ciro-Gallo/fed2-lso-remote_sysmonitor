@@ -68,7 +68,7 @@ BSTNode * rightRotate(BSTNode * root) {
 	x->dx = root; 
 	root->sx = T2; 
 
-	// Update heights 
+	//Update heights 
 	root->height = max(height(root->sx), height(root->dx))+1; 
 	x->height = max(height(x->sx), height(x->dx))+1; 
  
@@ -84,7 +84,7 @@ BSTNode * leftRotate(BSTNode * root) {
 	y->sx = root; 
 	root->dx = T2; 
 
-	// Update heights 
+	//Update heights 
 	root->height = max(height(root->sx), height(root->dx))+1; 
 	y->height = max(height(y->sx), height(y->dx))+1; 
 
