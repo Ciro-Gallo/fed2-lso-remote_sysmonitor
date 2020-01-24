@@ -61,12 +61,8 @@ int main(int args, char** argv) {
         buf[FREERAM] = freeRamPercentage;
         buf[PROCS] = info.procs;
         printf("uptime = %.1f procs = %d\n",buf[UPTIME],(int)buf[PROCS]);
-<<<<<<< HEAD
         printf ("free RAM: %5.1f MB  Perc: %2.1f\n", info.freeram / megabytes, freeRamPercentage);
         printf("-----------------------\n");
-=======
-        printf ("free RAM   : %5.1f MB  Perc: %2.1f\n", info.freeram / megabytes, freeRamPercentage);
->>>>>>> 6b58e2d4d2864a72bb0cca94f252962b86f5ab9f
         
         if( writen(sd,buf,sizeof(buf)) < 0 ) {
             error("Error writing host informations\n",STDOUT_FILENO,EWRITE);
