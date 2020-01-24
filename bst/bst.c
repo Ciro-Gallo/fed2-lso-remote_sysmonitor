@@ -71,8 +71,7 @@ BSTNode * rightRotate(BSTNode * root) {
 	// Update heights 
 	root->height = max(height(root->sx), height(root->dx))+1; 
 	x->height = max(height(x->sx), height(x->dx))+1; 
-
-	// Return new root 
+ 
 	return x; 
 } 
 
@@ -89,11 +88,9 @@ BSTNode * leftRotate(BSTNode * root) {
 	root->height = max(height(root->sx), height(root->dx))+1; 
 	y->height = max(height(y->sx), height(y->dx))+1; 
 
-	// Return new root 
 	return y; 
 } 
 
-// Get Balance factor of node N 
 int getBalance(BSTNode * node) { 
 	if (node == NULL) 
 		return 0; 
