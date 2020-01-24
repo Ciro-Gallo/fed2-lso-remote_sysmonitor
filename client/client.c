@@ -104,7 +104,7 @@ int main(int args, char** argv) {
                 break;
             } 
             
-            printf("- uptime: %.1f\n- freeRamPercentage: %.1f%% \n- procs: %.1f\n",buffinfo[UPTIME],buffinfo[FREERAM],buffinfo[PROCS]);
+            printf("- uptime: %.1f\n- freeRamPercentage: %.1f%% \n- procs: %d\n",buffinfo[UPTIME],buffinfo[FREERAM],(int)buffinfo[PROCS]);
         } else {
             //read last registered date
             memset(read_buff,0,BUFFSIZE);
