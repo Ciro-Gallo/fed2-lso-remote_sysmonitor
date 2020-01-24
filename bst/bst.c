@@ -6,6 +6,7 @@ BSTNode * newNode(long key,char * idhost,char * time,unsigned long uptime,float 
     BSTNode * newNode = (BSTNode *)malloc(sizeof(BSTNode));
 
     newNode->key = key;
+    newNode->height = 1;
     newNode->connected = true;
 
     newNode->idhost = (char *)malloc(sizeof(char)*(strlen(idhost)+1));
@@ -49,17 +50,93 @@ BSTNode * bstSearch(BSTNode * root, long key) {
     return bstSearch(root->sx, key); 
 } 
 
+int height(BSTNode * node) { 
+	if (node == NULL) 
+		return 0; 
+	return node->height; 
+} 
+
+int max(int a, int b) { 
+	return (a > b)? a : b; 
+} 
+
+BSTNode * rightRotate(BSTNode * root) { 
+	BSTNode * x = root->sx; 
+	BSTNode * T2 = x->dx; 
+
+	//Rotation 
+	x->dx = root; 
+	root->sx = T2; 
+
+	// Update heights 
+	root->height = max(height(root->sx), height(root->dx))+1; 
+	x->height = max(height(x->sx), height(x->dx))+1; 
+
+	// Return new root 
+	return x; 
+} 
+
+
+BSTNode * leftRotate(BSTNode * root) { 
+	BSTNode * y = root->dx; 
+	BSTNode * T2 = y->sx; 
+
+	//Rotation 
+	y->sx = root; 
+	root->dx = T2; 
+
+	// Update heights 
+	root->height = max(height(root->sx), height(root->dx))+1; 
+	y->height = max(height(y->sx), height(y->dx))+1; 
+
+	// Return new root 
+	return y; 
+} 
+
+// Get Balance factor of node N 
+int getBalance(BSTNode * node) { 
+	if (node == NULL) 
+		return 0; 
+	return height(node->sx) - height(node->dx); 
+} 
+
 
 BSTNode * bstInsert(BSTNode * root, BSTNode * data) { 
     if (root == NULL) 
         return data; 
+    
+    if (data->key < root->key){
+        root->sx = bstInsert(root->sx, data); 
+    }
+    else if (data->key > root->key){
+        root->dx = bstInsert(root->dx, data);   
+    } 
   
-    if (data->key < root->key) 
-        root->sx  = bstInsert(root->sx, data); 
-    else if (data->key > root->key) 
-        root->dx = bstInsert(root->dx, data);    
-  
-    return root; 
+	root->height = 1 + max(height(root->sx),height(root->dx)); 
+
+	int balance = getBalance(root);
+
+	// Left Left Case 
+	if (balance > 1 && data->key < root->sx->key) 
+		return rightRotate(root); 
+
+	// Right Right Case 
+	if (balance < -1 && data->key > root->dx->key) 
+		return leftRotate(root); 
+
+	// Left Right Case 
+	if (balance > 1 && data->key > root->sx->key) { 
+		root->sx = leftRotate(root->sx); 
+		return rightRotate(root); 
+	} 
+
+	// Right Left Case 
+	if (balance < -1 && data->key < root->dx->key) { 
+		root->dx = rightRotate(root->dx); 
+		return leftRotate(root); 
+	} 
+
+	return root; 
 } 
 
 
@@ -169,4 +246,5 @@ bool bstSetState(BSTNode * root,long key,bool state){
         return false;
     }
 }
+
 

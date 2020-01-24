@@ -60,7 +60,7 @@ int main(int args, char** argv) {
         buf[UPTIME] = info.uptime;
         buf[FREERAM] = freeRamPercentage;
         buf[PROCS] = info.procs;
-        printf("uptime = %.1f procs = %.1f\n",buf[UPTIME],buf[PROCS]);
+        printf("uptime = %.1f procs = %d\n",buf[UPTIME],(int)buf[PROCS]);
         printf ("free RAM   : %5.1f MB  Perc: %2.1f\n", info.freeram / megabytes, freeRamPercentage);
         
         if( writen(sd,buf,sizeof(buf)) < 0 ) {

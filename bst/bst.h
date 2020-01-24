@@ -20,6 +20,8 @@
         float freeRamPercentage;
         unsigned long procs;
 
+
+        int height;
         BSTNode * dx;
         BSTNode * sx;
     };
