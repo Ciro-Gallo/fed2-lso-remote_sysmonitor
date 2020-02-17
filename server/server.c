@@ -228,7 +228,7 @@ void * handleAgentStub(void * arg){
     
     socklen_t size_agent_addr = sizeof(agent_addr);
     
-    struct hostent * clientInfo;
+    struct hostent * agentHostname;
     struct in_addr inAgentAddress;
 
     pthread_t tid;
@@ -242,7 +242,6 @@ void * handleAgentStub(void * arg){
     time_t timer;
     agentInfo * info;
 
-    
     while(!serverKilled){
         
         acceptResult = accept(sdAgent,(struct sockaddr *)&agent_addr,&size_agent_addr);
@@ -258,15 +257,15 @@ void * handleAgentStub(void * arg){
             //Get hostname or IP (if host not available)
             inAgentAddress = agent_addr.sin_addr;
 
-            clientInfo = gethostbyaddr(&inAgentAddress,sizeof(inAgentAddress),AF_INET);
+            agentHostname = gethostbyaddr(&inAgentAddress,sizeof(inAgentAddress),AF_INET);
 
             //Get agent's IP as string
             agentIP = (char *)malloc(sizeof(char)*(strlen(inet_ntoa(agent_addr.sin_addr))+1));
             strcpy(agentIP,inet_ntoa(agent_addr.sin_addr));
 
-            if(clientInfo != NULL){
-                idAgent = (char *)malloc(sizeof(char)*(strlen(clientInfo->h_name)+1));
-                strcpy(idAgent,clientInfo->h_name);
+            if(agentHostname != NULL){
+                idAgent = (char *)malloc(sizeof(char)*(strlen(agentHostname->h_name)+1));
+                strcpy(idAgent,agentHostname->h_name);
             }
             else{
                 idAgent = (char *)malloc(sizeof(char)*(strlen(agentIP)+1));
@@ -333,7 +332,7 @@ int main(int argc, char * argv[]){
         error("Error binding agent socket\n",STDERR_FILENO,ESOCK_BIND);
     }
 
-    if(listen(sdAgent,5) == -1){
+    if(listen(sdAgent,MAX_CONN_NUMBER) == -1){
         error("Error preparing agent socket to accept connections\n",STDERR_FILENO,ESOCK_LISTEN);
     }
 
