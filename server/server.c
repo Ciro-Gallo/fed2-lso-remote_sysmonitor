@@ -197,7 +197,7 @@ void * handleAgent(void * arg){
             lastTime = (char *)malloc(sizeof(char)*(strlen(currentTime)+1));
             strcpy(lastTime,currentTime);
 
-            if(!inserted){ //First insertion of this agent
+            if(!inserted){ 
                 if(bstSetState(bstHostInfo->root,localKey,true)){
                     //Agent has reconnected: it is already in the structure, just update infos.
                     bstUpdate(bstHostInfo->root,node);
