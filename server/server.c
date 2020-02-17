@@ -136,7 +136,7 @@ void * handleClientStub(void * arg){
             sdClientLocal = (int *)malloc(sizeof(int));
             *sdClientLocal = acceptResult;
 
-            if(pthread_create(&tid,NULL,handleClient,sdClientLocal)){
+            if(pthread_create(&tid,NULL,handleClient,sdClientLocal) == 0){
                 listInsert(tidContainer,tid);
             }
             else{

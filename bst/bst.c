@@ -146,6 +146,7 @@ void bstPrint(BSTNode * root){
     }
 }
 
+
 char * bstGetHosts(BSTNode * root){
     char * oldStrSx = NULL;
     char * oldStrDx = NULL;
