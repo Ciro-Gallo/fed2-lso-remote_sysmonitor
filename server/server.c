@@ -136,9 +136,13 @@ void * handleClientStub(void * arg){
             sdClientLocal = (int *)malloc(sizeof(int));
             *sdClientLocal = acceptResult;
 
-            pthread_create(&tid,NULL,handleClient,sdClientLocal);
-            
-            listInsert(tidContainer,tid);
+            if(pthread_create(&tid,NULL,handleClient,sdClientLocal)){
+                listInsert(tidContainer,tid);
+            }
+            else{
+                char errorMessage[] = "Error while creating thread\n";
+                write(STDERR_FILENO,errorMessage,strlen(errorMessage)+1);
+            }
         }
     }
 
@@ -276,9 +280,14 @@ void * handleAgentStub(void * arg){
             info->time = instant;
             info->idhost = idAgent;
             info->IP = agentIP;
-
-            pthread_create(&tid,NULL,handleAgent,info);
-            listInsert(tidContainer,tid);
+            
+            if(pthread_create(&tid,NULL,handleAgent,info) == 0){
+                listInsert(tidContainer,tid);
+            }
+            else{
+                char errorMessage[] = "Error while creating thread\n";
+                write(STDERR_FILENO,errorMessage,strlen(errorMessage)+1);
+            }
         }
     }
     
