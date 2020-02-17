@@ -90,7 +90,6 @@ char** hostsToArray(char * buff, int * hnumber) {
     return arrayHost;
 }
 
-
 char** printAndGetUpdatedList(int sockd, int * hnumber) {
     char buff[BUFFSIZE] = ""; 
     

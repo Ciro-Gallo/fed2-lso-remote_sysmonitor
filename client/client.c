@@ -69,7 +69,7 @@ int main(int args, char** argv) {
 
     int choice;
     while(1) {
-        //print the host list sent by the server and make an array of hosts
+        //print the hosts list sent by the server and make an array of hosts
         g_hosts = printAndGetUpdatedList(sd,&g_hnumber);
 
         //choose the host and send his name to the server
