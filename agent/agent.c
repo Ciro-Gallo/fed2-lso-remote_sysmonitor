@@ -38,7 +38,9 @@ int main(int args, char** argv) {
 
     myaddress.sin_family = AF_INET;
     myaddress.sin_port = htons(port);
-    inet_aton(argv[2],&myaddress.sin_addr);
+    if(inet_aton(argv[2],&myaddress.sin_addr) == 0) {
+         error("Not valid IP address\n",STDOUT_FILENO,EIP_NOTVALID);
+    }
 
     if( (sd = socket(PF_INET,SOCK_STREAM,0)) < 0 ) {
         error("Error creating socket\n",STDOUT_FILENO,ESOCK_CREATE);
