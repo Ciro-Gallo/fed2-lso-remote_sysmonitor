@@ -6,7 +6,7 @@ int sdAgent;
 int sdClient;
 
 BSTHostInfo * bstHostInfo;
-node * sdContainer;
+node * tidContainer;
 
 bool serverKilled = false;
 
@@ -15,7 +15,7 @@ void handleSigInt(int code){
 }
 
 void killServer(void){
-    node * root = sdContainer->next;
+    node * root = tidContainer->next;
     while(root != NULL){
         pthread_join(root->tid,NULL);
         root = root->next;
@@ -29,7 +29,7 @@ void killServer(void){
     }
 
     destroyBSTHostInfo(bstHostInfo);
-    listDestroy(sdContainer);
+    listDestroy(tidContainer);
 }
 
 void * handleClient(void * arg){
@@ -138,7 +138,7 @@ void * handleClientStub(void * arg){
 
             pthread_create(&tid,NULL,handleClient,sdClientLocal);
             
-            listInsert(sdContainer,tid);
+            listInsert(tidContainer,tid);
         }
     }
 
@@ -278,7 +278,7 @@ void * handleAgentStub(void * arg){
             info->IP = agentIP;
 
             pthread_create(&tid,NULL,handleAgent,info);
-            listInsert(sdContainer,tid);
+            listInsert(tidContainer,tid);
         }
     }
     
@@ -365,7 +365,7 @@ int main(int argc, char * argv[]){
     //Init struct containing mutex and bst root
     bstHostInfo = initBSTHostInfo();
     //Create list that will contain ids of threads created by stubs
-    sdContainer = listCreate();
+    tidContainer = listCreate();
 
     pthread_t tid_agent, tid_client;
 
