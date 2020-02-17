@@ -160,7 +160,6 @@ void * handleAgent(void * arg){
     time_t timer;
 
     char * currentTime;
-    char * lastTime;
     
     long localKey;
 
@@ -190,12 +189,6 @@ void * handleAgent(void * arg){
         pthread_mutex_lock(&bstHostInfo->mutex);
             
             node = newNode(localKey,info->idhost,currentTime,read_buffer[UPTIME],read_buffer[FREERAM],read_buffer[PROCS]);
-            
-            if(inserted)
-                free(lastTime);
-
-            lastTime = (char *)malloc(sizeof(char)*(strlen(currentTime)+1));
-            strcpy(lastTime,currentTime);
 
             if(!inserted){ 
                 if(bstSetState(bstHostInfo->root,localKey,true)){
@@ -215,7 +208,6 @@ void * handleAgent(void * arg){
         pthread_mutex_unlock(&bstHostInfo->mutex);
     }
 
-    free(lastTime);
     destroyAgentInfo(info);
 
     return NULL;
