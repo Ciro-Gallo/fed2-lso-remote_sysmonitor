@@ -12,7 +12,7 @@ al server;
 Si utilizzi il linguaggio C su piattaforma UNIX. I processi comunicano tramite socket TCP.
 
 # Documentazione
-La documentazione completa del software è disponibile al [https://docs.google.com/document/d/1Y5Ok6j4xdEeq5L_xVmeziPvZghuUd3JcSD31FKqhnWs/](seguente link) in cui è possibile reperire:
+La documentazione completa del software è disponibile al [seguente link](https://docs.google.com/document/d/1Y5Ok6j4xdEeq5L_xVmeziPvZghuUd3JcSD31FKqhnWs/) in cui è possibile reperire:
 - Guida alla compilazione e all'uso.
 - Protocollo di comunicazione client-server.
 - Protocollo di comunicazione agent-server.
